@@ -452,6 +452,19 @@ describe('WalletAccountSolanaGasless', () => {
 
       expect(hash).toBe('manual-broadcast-sig-xyz')
     })
+
+    test('should throw when creating a signer after disposal', async () => {
+      const account = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        TEST_CONFIG
+      )
+
+      account.dispose()
+
+      await expect(account._getSigner())
+        .rejects.toThrow('The wallet account has been disposed.')
+    })
   })
 
   describe('transfer', () => {
