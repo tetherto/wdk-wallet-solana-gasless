@@ -17,10 +17,10 @@
 import { WalletAccountSolana } from '@tetherto/wdk-wallet-solana'
 
 import { createKeyPairSignerFromPrivateKeyBytes, partiallySignTransactionMessageWithSigners } from '@solana/signers'
-import { getBase64EncodedWireTransaction } from '@solana/transactions'
+import { assertIsFullySignedTransaction, getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { appendTransactionMessageInstruction, setTransactionMessageFeePayer } from '@solana/transaction-messages'
 import { address } from '@solana/addresses'
-import { AccountRole, pipe } from '@solana/kit'
+import { AccountRole, getBase64Encoder, pipe } from '@solana/kit'
 
 import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solana-gasless.js'
 
@@ -120,7 +120,29 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @returns {Promise<FullySignedTransaction>} The signed transaction.
    */
   async signTransaction (tx) {
-    return await this._ownerAccount.signTransaction(tx)
+    if (!this.keyPair.privateKey) {
+      throw new Error('The wallet account has been disposed.')
+    }
+
+    if (!this._paymaster) {
+      throw new Error('The wallet must be connected to a paymaster to sign transactions.')
+    }
+
+    const { transactionMessage } = await this._populateTransactionMessage(tx)
+
+    const partiallySignedTransactionMessage = await partiallySignTransactionMessageWithSigners(transactionMessage)
+
+    const encodedTransaction = getBase64EncodedWireTransaction(partiallySignedTransactionMessage)
+
+    const { signed_transaction: signedTransaction } = await this._paymaster.signTransaction({
+      transaction: encodedTransaction
+    })
+
+    const fullySignedTransaction = getTransactionDecoder().decode(getBase64Encoder().encode(signedTransaction))
+
+    assertIsFullySignedTransaction(fullySignedTransaction)
+
+    return fullySignedTransaction
   }
 
   /**

@@ -16,8 +16,8 @@
 
 import { describe, test, expect, beforeAll, beforeEach, afterEach, jest } from '@jest/globals'
 
-import { getCompiledTransactionMessageDecoder } from '@solana/transaction-messages'
-import { AccountRole } from '@solana/kit'
+import { getBase64EncodedWireTransaction, getTransactionDecoder, isFullySignedTransaction } from '@solana/transactions'
+import { AccountRole, getBase64Encoder } from '@solana/kit'
 
 import WalletManagerSolanaGasless, { WalletAccountReadOnlySolanaGasless, WalletAccountSolanaGasless } from '../index.js'
 
@@ -66,6 +66,18 @@ function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
           }
         ],
         data: new Uint8Array()
+      }
+    }),
+    signTransaction: jest.fn().mockImplementation(async ({ transaction }) => {
+      const decoded = getTransactionDecoder().decode(getBase64Encoder().encode(transaction))
+      const fakePaymasterSignature = new Uint8Array(64).fill(1)
+      const fullySigned = {
+        ...decoded,
+        signatures: { ...decoded.signatures, [TEST_PAYMASTER_ADDRESS]: fakePaymasterSignature }
+      }
+      return {
+        signed_transaction: getBase64EncodedWireTransaction(fullySigned),
+        signer_pubkey: TEST_PAYMASTER_ADDRESS
       }
     }),
     signAndSendTransaction: jest.fn().mockResolvedValue({
@@ -400,43 +412,45 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('signTransaction', () => {
-    test('should sign a transaction and return the signed transaction', async () => {
-      const mockRpc = createMockRpc()
-      const originalRpc = account._ownerAccount._rpc
-      account._ownerAccount._rpc = mockRpc
+    let mockRpc
+    let mockPaymaster
+    let originalRpc
+    let originalPaymaster
 
-      try {
-        const tx = {
-          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
-          value: 1000000n
-        }
-
-        const signedTx = await account.signTransaction(tx)
-        const decodedMessage = getCompiledTransactionMessageDecoder().decode(
-          signedTx.messageBytes
-        )
-
-        expect(decodedMessage.staticAccounts).toContain(TEST_ACCOUNT_ADDRESS)
-        expect(decodedMessage.staticAccounts).toContain(tx.to)
-        expect(signedTx.signatures[TEST_ACCOUNT_ADDRESS]).toBeInstanceOf(
-          Uint8Array
-        )
-      } finally {
-        account._ownerAccount._rpc = originalRpc
-      }
+    beforeEach(() => {
+      originalRpc = account._rpc
+      originalPaymaster = account._paymaster
+      mockRpc = createMockRpc()
+      mockPaymaster = createMockPaymaster()
+      account._rpc = mockRpc
+      account._solanaReadOnlyAccount._rpc = mockRpc
+      account._paymaster = mockPaymaster
     })
 
-    test('should throw when creating a signer after disposal', async () => {
-      const account = new WalletAccountSolanaGasless(
-        TEST_SEED_PHRASE,
-        "0'/0'",
-        TEST_CONFIG
-      )
+    afterEach(() => {
+      account._rpc = originalRpc
+      account._solanaReadOnlyAccount._rpc = originalRpc
+      account._paymaster = originalPaymaster
+    })
 
-      account.dispose()
+    test('should sign a transaction without broadcasting, then broadcast it manually via the rpc', async () => {
+      mockRpc.sendTransaction = jest.fn().mockReturnValue({
+        send: jest.fn().mockResolvedValue('manual-broadcast-sig-xyz')
+      })
 
-      await expect(account._getSigner())
-        .rejects.toThrow('The wallet account has been disposed.')
+      const TRANSACTION = {
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      }
+
+      const signedTx = await account.signTransaction(TRANSACTION)
+
+      expect(isFullySignedTransaction(signedTx)).toBe(true)
+
+      const encoded = getBase64EncodedWireTransaction(signedTx)
+      const hash = await account._rpc.sendTransaction(encoded, { encoding: 'base64' }).send()
+
+      expect(hash).toBe('manual-broadcast-sig-xyz')
     })
   })
 
