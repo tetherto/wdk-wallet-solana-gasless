@@ -144,14 +144,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
      */
     protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<GetPaymentInstructionResponse>;
-    /**
-     * Calculates the fee for a given transaction message.
-     *
-     * @param {TransactionMessage} transactionMessage - The transaction message to calculate fee for.
-     * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
-     * @returns {Promise<bigint>} The calculated transaction fee in tokens.
-     */
-    _getTransactionFee(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<bigint>;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;

@@ -14,20 +14,6 @@ export default class WalletManagerSolanaGasless extends WalletManager {
      */
     protected _config: SolanaGaslessWalletConfig;
     /**
-     * The commitment level for transactions.
-     *
-     * @protected
-     * @type {Commitment}
-     */
-    protected _commitment: Commitment;
-    /**
-     * A Solana RPC client for HTTP requests.
-     *
-     * @protected
-     * @type {SolanaRpc | undefined}
-     */
-    protected _rpc: SolanaRpc | undefined;
-    /**
      * Returns the wallet account at a specific index (see [SLIP-0010](https://slips.readthedocs.io/en/latest/slip-0010/)).
      *
      * @example
@@ -48,8 +34,6 @@ export default class WalletManagerSolanaGasless extends WalletManager {
      */
     getAccountByPath(path: string): Promise<WalletAccountSolanaGasless>;
 }
-export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
-export type Commitment = import("@solana/rpc-types").Commitment;
 export type SolanaGaslessWalletConfig = import("./wallet-account-solana-gasless.js").SolanaGaslessWalletConfig;
 import WalletManager from '@tetherto/wdk-wallet';
 import WalletAccountSolanaGasless from './wallet-account-solana-gasless.js';

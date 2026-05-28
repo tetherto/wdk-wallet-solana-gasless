@@ -114,7 +114,6 @@ describe('WalletAccountSolanaGasless', () => {
           TEST_CONFIG
         )
 
-        expect(account).toBeDefined()
         expect(account).toBeInstanceOf(WalletAccountSolanaGasless)
       })
   })
@@ -122,7 +121,7 @@ describe('WalletAccountSolanaGasless', () => {
   describe('address', () => {
       test('should return a valid Solana address', async () => {
         const address = await account.getAddress()
-        expect(address).toMatch(TEST_ACCOUNT_ADDRESS)
+        expect(address).toBe(TEST_ACCOUNT_ADDRESS)
       })
 
       test('should return different addresses for different account indices', async () => {
@@ -130,11 +129,11 @@ describe('WalletAccountSolanaGasless', () => {
         const account1 = await wallet.getAccount(1)
         const account2 = await wallet.getAccount(2)
 
-        expect(await account0.getAddress()).toMatch(TEST_ACCOUNT_ADDRESS)
-        expect(await account1.getAddress()).toMatch(
+        expect(await account0.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+        expect(await account1.getAddress()).toBe(
           'CfGcujEkPVDx7yGyn1PUjxn2e353MXbLk8ixzwuJUktK'
         )
-        expect(await account2.getAddress()).toMatch(
+        expect(await account2.getAddress()).toBe(
           'Grwp8oDHgAD8PVSS51pWGCY5QRM3hqiH8QcbPRAEUABq'
         )
       })
@@ -144,13 +143,13 @@ describe('WalletAccountSolanaGasless', () => {
         const accountPath2 = await wallet.getAccountByPath("0'/0'/1'")
         const accountPath3 = await wallet.getAccountByPath("1'/0'/0'")
 
-        expect(await accountPath1.getAddress()).toMatch(
+        expect(await accountPath1.getAddress()).toBe(
           'DPGHHHMaayXkaThUJCUnUAJCdgc9sxNh1UEGa6vJximM'
         )
-        expect(await accountPath2.getAddress()).toMatch(
+        expect(await accountPath2.getAddress()).toBe(
           'jbhYXhWfRPqPvaKqaWCJEgBdZMquFxUvjWaWLEH3YCz'
         )
-        expect(await accountPath3.getAddress()).toMatch(
+        expect(await accountPath3.getAddress()).toBe(
           '57hwCai22XueypvXcXKotkuAQYj2eukFcY5ymWB7Arvg'
         )
       })
@@ -182,7 +181,7 @@ describe('WalletAccountSolanaGasless', () => {
 
   describe('path', () => {
       test('should follow SLIP-0010 Solana derivation path format', () => {
-        expect(account.path).toMatch("m/44'/501'/0'/0'")
+        expect(account.path).toBe("m/44'/501'/0'/0'")
       })
 
       test('should have correct path for account index 5', async () => {
@@ -216,7 +215,9 @@ describe('WalletAccountSolanaGasless', () => {
         )
         const tempAccount = await tempWallet.getAccount(99)
 
-        expect(tempAccount.keyPair.privateKey).toBeTruthy()
+        expect(Buffer.from(tempAccount.keyPair.privateKey).toString('hex')).toBe(
+          '384c61286f76b885903cb4f9562d6dccaf37a6732600cebd675733203426a4fc'
+        )
 
         tempAccount.dispose()
 
@@ -232,8 +233,12 @@ describe('WalletAccountSolanaGasless', () => {
         const account0 = await tempWallet.getAccount(0)
         const account1 = await tempWallet.getAccount(1)
 
-        expect(account0.keyPair.privateKey).toBeTruthy()
-        expect(account1.keyPair.privateKey).toBeTruthy()
+        expect(Buffer.from(account0.keyPair.privateKey).toString('hex')).toBe(
+          'de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f'
+        )
+        expect(Buffer.from(account1.keyPair.privateKey).toString('hex')).toBe(
+          '4642fc818f6525a2c5ae784cc98f44d639492c21271c5f7f0ac30ee95a3357bb'
+        )
 
         tempWallet.dispose()
 
@@ -250,7 +255,9 @@ describe('WalletAccountSolanaGasless', () => {
 
         tempAccount.dispose()
 
-        expect(tempAccount.keyPair.publicKey).toBeDefined()
+        expect(Buffer.from(tempAccount.keyPair.publicKey).toString('hex')).toBe(
+          '5a84997ab4e543bd48a39f6aab2db7c0816f958167a56d4a9da0fd7b58517324'
+        )
       })
     })
 
@@ -282,7 +289,9 @@ describe('WalletAccountSolanaGasless', () => {
         )
         const tempAccount = await tempWallet.getAccount(95)
 
-        expect(await tempAccount.sign('test message')).toBeDefined()
+        expect(await tempAccount.sign('test message')).toBe(
+          'd80d466cfa30f1a382bbd9a2d24036f34f9960affb5668e73c70013811013540fe20b372949b6bf3b016a166b9373a4088fdcda51a5e74feafa382a14ce3f009'
+        )
 
         tempAccount.dispose()
 
@@ -351,9 +360,10 @@ describe('WalletAccountSolanaGasless', () => {
           value: 1000000n
         })
 
-        expect(result).toBeDefined()
-        expect(result.hash).toBe('mock-signature-123')
-        expect(result.fee).toBe(5000n)
+        expect(result).toEqual({
+          hash: 'mock-signature-123',
+          fee: 5000n
+        })
         expect(mockPaymaster.signAndSendTransaction).toHaveBeenCalled()
     })
 

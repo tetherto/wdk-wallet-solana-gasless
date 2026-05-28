@@ -421,17 +421,4 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
 
     return { ...payment, payment_instruction: upgradedPaymentInstruction }
   }
-
-  /**
-   * Calculates the fee for a given transaction message.
-   *
-   * @param {TransactionMessage} transactionMessage - The transaction message to calculate fee for.
-   * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
-   * @returns {Promise<bigint>} The calculated transaction fee in tokens.
-   */
-  async _getTransactionFee (transactionMessage, config = {}) {
-    const { payment_amount: fee } = await this._getTransactionPaymentInfo(transactionMessage, config)
-
-    return BigInt(fee)
-  }
 }

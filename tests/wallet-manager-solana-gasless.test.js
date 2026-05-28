@@ -76,8 +76,6 @@ describe('WalletManagerSolanaGasless', () => {
 
       expect(account).toBeInstanceOf(WalletAccountSolanaGasless)
 
-      expect(wallet._rpc).toBeDefined()
-
       wallet.dispose()
     })
 

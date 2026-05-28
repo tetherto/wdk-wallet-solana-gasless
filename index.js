@@ -13,7 +13,15 @@
 // limitations under the License.
 'use strict'
 
+/** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
+/** @typedef {import('@tetherto/wdk-wallet-solana').TransferOptions} TransferOptions */
+/** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
+/** @typedef {import('./src/wallet-account-solana-gasless.js').FullySignedTransaction} FullySignedTransaction */
+/** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
+/** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfig} SolanaGaslessWalletPaymasterConfig */
+/** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfigOverrides} SolanaGaslessWalletPaymasterConfigOverrides */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
 
 export { default } from './src/wallet-manager-solana-gasless.js'

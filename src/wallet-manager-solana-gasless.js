@@ -16,14 +16,7 @@
 
 import WalletManager from '@tetherto/wdk-wallet'
 
-import FailoverProvider from '@tetherto/wdk-failover-provider'
-
-import { createSolanaRpc } from '@solana/rpc'
-
 import WalletAccountSolanaGasless from './wallet-account-solana-gasless.js'
-
-/** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
-/** @typedef {import('@solana/rpc-types').Commitment} Commitment */
 
 /** @typedef {import('./wallet-account-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
 
@@ -44,38 +37,6 @@ export default class WalletManagerSolanaGasless extends WalletManager {
      * @type {SolanaGaslessWalletConfig}
      */
     this._config = config
-
-    const { provider: providerOption, rpcUrl, commitment = 'confirmed', retries = 3 } = config
-    const rpcTarget = providerOption ?? rpcUrl
-
-    /**
-     * The commitment level for transactions.
-     *
-     * @protected
-     * @type {Commitment}
-     */
-    this._commitment = commitment
-
-    /**
-     * A Solana RPC client for HTTP requests.
-     *
-     * @protected
-     * @type {SolanaRpc | undefined}
-     */
-    this._rpc = undefined
-
-    if (Array.isArray(rpcTarget)) {
-      if (rpcTarget.length > 0) {
-        const failoverProvider = new FailoverProvider({ retries })
-        for (const entry of rpcTarget) {
-          const option = createSolanaRpc(entry)
-          failoverProvider.addProvider(option)
-        }
-        this._rpc = failoverProvider.initialize()
-      }
-    } else if (rpcTarget) {
-      this._rpc = createSolanaRpc(rpcTarget)
-    }
   }
 
   /**
