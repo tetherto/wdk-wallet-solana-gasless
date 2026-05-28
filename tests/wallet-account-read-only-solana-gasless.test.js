@@ -18,8 +18,6 @@ import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 
 import { AccountRole } from '@solana/kit'
 
-import { WalletAccountReadOnlySolanaGasless, WalletAccountSolanaGasless } from '../index.js'
-
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
 const TEST_SEED_PHRASE =
@@ -68,25 +66,35 @@ function createMockPaymaster () {
   }
 }
 
+let mockRpc
+let mockPaymaster
+
+const actualSolanaRpc = await import('@solana/rpc')
+const actualKora = await import('@solana/kora')
+
+jest.unstable_mockModule('@solana/rpc', () => ({
+  ...actualSolanaRpc,
+  createSolanaRpc: jest.fn(() => mockRpc)
+}))
+
+jest.unstable_mockModule('@solana/kora', () => ({
+  ...actualKora,
+  KoraClient: jest.fn(() => mockPaymaster)
+}))
+
+const { WalletAccountReadOnlySolanaGasless, WalletAccountSolanaGasless } = await import('../index.js')
+
 describe('WalletAccountReadOnlySolanaGasless', () => {
   let readOnlyAccount
-  let mockRpc
-  let mockPaymaster
 
   beforeEach(() => {
+    mockRpc = createMockRpc()
+    mockPaymaster = createMockPaymaster()
+
     readOnlyAccount = new WalletAccountReadOnlySolanaGasless(
       TEST_ADDRESS,
       TEST_CONFIG
     )
-
-    mockRpc = createMockRpc()
-    mockPaymaster = createMockPaymaster()
-
-    readOnlyAccount._rpc = mockRpc
-    readOnlyAccount._solanaReadOnlyAccount._rpc = mockRpc
-    readOnlyAccount._commitment = 'confirmed'
-    readOnlyAccount._solanaReadOnlyAccount._commitment = 'confirmed'
-    readOnlyAccount._paymaster = mockPaymaster
   })
 
   describe('address', () => {
@@ -288,10 +296,6 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
           { rpcUrl: TEST_PAYMASTER_URL }
         ]
       })
-
-      account._rpc = mockRpc
-      account._solanaReadOnlyAccount._rpc = mockRpc
-      account._paymaster = mockPaymaster
 
       const result = await account.quoteSendTransaction({
         to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',

@@ -19,8 +19,6 @@ import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globa
 import { getBase64EncodedWireTransaction, getTransactionDecoder, isFullySignedTransaction } from '@solana/transactions'
 import { AccountRole, getBase64Encoder } from '@solana/kit'
 
-import WalletManagerSolanaGasless, { WalletAccountReadOnlySolanaGasless, WalletAccountSolanaGasless } from '../index.js'
-
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://dummyurl.com'
@@ -53,6 +51,20 @@ function createMockRpc () {
       })
     })
   }
+}
+
+function createMockRpcWithRecipientAta () {
+  const rpc = createMockRpc()
+  rpc.getAccountInfo.mockReturnValue({
+    send: jest.fn().mockResolvedValue({
+      value: {
+        owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+        lamports: 2039280n,
+        data: [Buffer.alloc(165).toString('base64'), 'base64']
+      }
+    })
+  })
+  return rpc
 }
 
 function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
@@ -88,11 +100,35 @@ function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
   }
 }
 
+let mockRpc
+let mockPaymaster
+
+const actualSolanaRpc = await import('@solana/rpc')
+const actualKora = await import('@solana/kora')
+
+jest.unstable_mockModule('@solana/rpc', () => ({
+  ...actualSolanaRpc,
+  createSolanaRpc: jest.fn(() => mockRpc)
+}))
+
+jest.unstable_mockModule('@solana/kora', () => ({
+  ...actualKora,
+  KoraClient: jest.fn(() => mockPaymaster)
+}))
+
+const {
+  default: WalletManagerSolanaGasless,
+  WalletAccountReadOnlySolanaGasless,
+  WalletAccountSolanaGasless
+} = await import('../index.js')
+
 describe('WalletAccountSolanaGasless', () => {
   let wallet
   let account
 
   beforeEach(async () => {
+    mockRpc = createMockRpc()
+    mockPaymaster = createMockPaymaster()
     wallet = new WalletManagerSolanaGasless(TEST_SEED_PHRASE, TEST_CONFIG)
     account = await wallet.getAccount(0)
   })
@@ -310,27 +346,6 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('sendTransaction', () => {
-    let mockRpc
-    let mockPaymaster
-    let originalRpc
-    let originalPaymaster
-
-    beforeEach(() => {
-      originalRpc = account._rpc
-      originalPaymaster = account._paymaster
-      mockRpc = createMockRpc()
-      mockPaymaster = createMockPaymaster()
-      account._rpc = mockRpc
-      account._solanaReadOnlyAccount._rpc = mockRpc
-      account._paymaster = mockPaymaster
-    })
-
-    afterEach(() => {
-      account._rpc = originalRpc
-      account._solanaReadOnlyAccount._rpc = originalRpc
-      account._paymaster = originalPaymaster
-    })
-
     test('should throw if paymaster not configured', async () => {
         const noPaymasterAccount = new WalletAccountSolanaGasless(
           TEST_SEED_PHRASE,
@@ -456,27 +471,6 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('signTransaction', () => {
-    let mockRpc
-    let mockPaymaster
-    let originalRpc
-    let originalPaymaster
-
-    beforeEach(() => {
-      originalRpc = account._rpc
-      originalPaymaster = account._paymaster
-      mockRpc = createMockRpc()
-      mockPaymaster = createMockPaymaster()
-      account._rpc = mockRpc
-      account._solanaReadOnlyAccount._rpc = mockRpc
-      account._paymaster = mockPaymaster
-    })
-
-    afterEach(() => {
-      account._rpc = originalRpc
-      account._solanaReadOnlyAccount._rpc = originalRpc
-      account._paymaster = originalPaymaster
-    })
-
     test('should sign a transaction without broadcasting, then broadcast it manually via the rpc', async () => {
       mockRpc.sendTransaction = jest.fn().mockReturnValue({
         send: jest.fn().mockResolvedValue('manual-broadcast-sig-xyz')
@@ -492,12 +486,12 @@ describe('WalletAccountSolanaGasless', () => {
       expect(isFullySignedTransaction(signedTx)).toBe(true)
 
       const encoded = getBase64EncodedWireTransaction(signedTx)
-      const hash = await account._rpc.sendTransaction(encoded, { encoding: 'base64' }).send()
+      const hash = await mockRpc.sendTransaction(encoded, { encoding: 'base64' }).send()
 
       expect(hash).toBe('manual-broadcast-sig-xyz')
     })
 
-    test('should throw when creating a signer after disposal', async () => {
+    test('should throw when signing a transaction after disposal', async () => {
       const account = new WalletAccountSolanaGasless(
         TEST_SEED_PHRASE,
         "0'/0'",
@@ -506,30 +500,30 @@ describe('WalletAccountSolanaGasless', () => {
 
       account.dispose()
 
-      await expect(account._getSigner())
+      await expect(account.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      }))
         .rejects.toThrow('The wallet account has been disposed.')
     })
   })
 
   describe('transfer', () => {
-    let mockRpc
-    let mockPaymaster
+    let wallet
+    let account
 
-    beforeEach(() => {
-      mockRpc = createMockRpc()
-      mockRpc.getAccountInfo.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-            lamports: 2039280n,
-            data: [Buffer.alloc(165).toString('base64'), 'base64']
-          }
-        })
-      })
+    beforeEach(async () => {
+      mockRpc = createMockRpcWithRecipientAta()
       mockPaymaster = createMockPaymaster()
-      account._rpc = mockRpc
-      account._solanaReadOnlyAccount._rpc = mockRpc
-      account._paymaster = mockPaymaster
+      wallet = new WalletManagerSolanaGasless(TEST_SEED_PHRASE, TEST_CONFIG)
+      account = await wallet.getAccount(0)
+    })
+
+    afterEach(() => {
+      account.dispose()
+      account = undefined
+      wallet.dispose()
+      wallet = undefined
     })
 
     test('should throw if paymaster not configured', async () => {
@@ -596,8 +590,6 @@ describe('WalletAccountSolanaGasless', () => {
             transferMaxFee: 1000n
           }
         )
-        limitedAccount._rpc = mockRpc
-        limitedAccount._paymaster = mockPaymaster
 
         await expect(
           limitedAccount.transfer({
