@@ -51,7 +51,7 @@ import { ConfigurationError } from './errors.js'
 
 /**
  * @typedef {Object} SolanaGaslessWalletPaymasterConfig
- * @property {string | KoraClientOptions | Array<string | KoraClientOptions>} paymasterUrl - The paymaster RPC url, client options, or failover list.
+ * @property {string | KoraClientOptions | (string | KoraClientOptions)[]} paymasterUrl - The paymaster RPC url, client options, or failover list.
  * @property {string} paymasterAddress - The address of the paymaster program.
  * @property {PaymasterTokenConfig} paymasterToken - The paymaster token configuration.
  */

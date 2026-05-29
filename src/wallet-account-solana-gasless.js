@@ -30,7 +30,6 @@ import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solan
 
 /** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 /** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
-/** @typedef {import('@solana/signers').KeyPairSigner} KeyPairSigner */
 
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaWalletConfig} SolanaWalletConfig */
@@ -164,12 +163,11 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /**
-   * Transfers a token to another address.
+   * Transfers a token to another address. Native SOL transfers are not supported here.
    *
    * @param {TransferOptions} options - The transfer's options.
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<TransferResult>} The transfer's result.
-   * @note only SPL tokens - won't work for native SOL
    */
   async transfer ({ token, recipient, amount }, config = {}) {
     if (!this.keyPair.privateKey) {

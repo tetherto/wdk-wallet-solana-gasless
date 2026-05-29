@@ -186,7 +186,7 @@ export type SolanaGaslessWalletPaymasterConfig = {
     /**
      * - The paymaster RPC url, client options, or failover list.
      */
-    paymasterUrl: string | KoraClientOptions | Array<string | KoraClientOptions>;
+    paymasterUrl: string | KoraClientOptions | (string | KoraClientOptions)[];
     /**
      * - The address of the paymaster program.
      */

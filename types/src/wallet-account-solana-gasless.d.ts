@@ -70,12 +70,11 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      */
     sendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
     /**
-     * Transfers a token to another address.
+     * Transfers a token to another address. Native SOL transfers are not supported here.
      *
      * @param {TransferOptions} options - The transfer's options.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransferResult>} The transfer's result.
-     * @note only SPL tokens - won't work for native SOL
      */
     transfer({ token, recipient, amount }: TransferOptions, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransferResult>;
     /**
@@ -100,7 +99,6 @@ export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOpti
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
-export type KeyPairSigner = import("@solana/signers").KeyPairSigner;
 export type SolanaTransaction = import("./wallet-account-read-only-solana-gasless.js").SolanaTransaction;
 export type SolanaGaslessWalletConfig = import("./wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletConfig;
 export type SolanaGaslessWalletPaymasterConfigOverrides = import("./wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfigOverrides;
