@@ -118,10 +118,6 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @returns {Promise<FullySignedTransaction>} The signed transaction.
    */
   async signTransaction (tx, config = {}) {
-    if (!this.keyPair.privateKey) {
-      throw new Error('The wallet account has been disposed.')
-    }
-
     const { transactionMessage } = await this._populateTransactionMessage(tx, config)
 
     const partiallySignedTransactionMessage = await partiallySignTransactionMessageWithSigners(transactionMessage)
@@ -147,10 +143,6 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @returns {Promise<TransactionResult>} The transaction's result.
    */
   async sendTransaction (tx, config = {}) {
-    if (!this.keyPair.privateKey) {
-      throw new Error('The wallet account has been disposed.')
-    }
-
     const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config)
 
     const partiallySignedTransactionMessage = await partiallySignTransactionMessageWithSigners(transactionMessage)
@@ -170,10 +162,6 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @returns {Promise<TransferResult>} The transfer's result.
    */
   async transfer ({ token, recipient, amount }, config = {}) {
-    if (!this.keyPair.privateKey) {
-      throw new Error('The wallet account has been disposed.')
-    }
-
     const mergedConfig = { ...this._config, ...config }
 
     const tx = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
@@ -255,10 +243,6 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
   /** @private */
   async _getSigner () {
-    if (!this._ownerAccount.keyPair.privateKey) {
-      throw new Error('The wallet account has been disposed.')
-    }
-
     if (!this._signer) {
       this._signer = await createKeyPairSignerFromPrivateKeyBytes(this._ownerAccount.keyPair.privateKey)
     }

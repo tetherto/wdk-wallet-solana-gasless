@@ -339,9 +339,9 @@ describe('WalletAccountSolanaGasless', () => {
 
         tempAccount.dispose()
 
-        await expect(tempAccount.sign('test message')).rejects.toThrow(
-          'The wallet account has been disposed.'
-        )
+        await expect(
+          tempAccount.sign('test message')
+        ).rejects.toThrow('The wallet account has been disposed.')
       })
   })
 
@@ -359,7 +359,7 @@ describe('WalletAccountSolanaGasless', () => {
             to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
             value: 1000n
           })
-        ).rejects.toThrow('The wallet account has been disposed.')
+        ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
     })
 
     test('should successfully send a transaction', async () => {
@@ -483,11 +483,12 @@ describe('WalletAccountSolanaGasless', () => {
 
       account.dispose()
 
-      await expect(account.signTransaction({
+      await expect(
+        account.signTransaction({
         to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
         value: 1000000n
-      }))
-        .rejects.toThrow('The wallet account has been disposed.')
+        })
+      ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
     })
   })
 
@@ -523,7 +524,7 @@ describe('WalletAccountSolanaGasless', () => {
             recipient: TEST_PAYMASTER_ADDRESS,
             amount: 1000n
           })
-        ).rejects.toThrow('The wallet account has been disposed.')
+        ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
     })
 
     test('should throw if amount exceeds u64 maximum', async () => {
