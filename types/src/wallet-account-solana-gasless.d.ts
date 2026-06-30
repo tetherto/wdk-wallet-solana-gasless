@@ -65,12 +65,13 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     /**
      * Sends a transaction.
      *
-     * @param {SolanaTransaction} tx - The transaction.
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+     * @note When an already-signed transaction is passed, it is broadcast directly to the network. The paymaster has already co-signed it at sign time, so it is not contacted again, and the fee/max-fee check (already enforced during `signTransaction`) is skipped. The returned `fee` is `0n`, as the gasless payment amount is locked into the signed message and cannot be recomputed.
      */
-    sendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
+    sendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
     /**
      * Transfers a token to another address. Native SOL transfers are not supported here.
      *
@@ -92,6 +93,14 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     dispose(): void;
     /** @private */
     private _populateTransactionMessage;
+    /**
+     * Broadcasts an already-signed transaction directly to the network, bypassing the paymaster.
+     *
+     * @private
+     * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+     * @returns {Promise<string>} The transaction's signature.
+     */
+    private _broadcastSignedTransaction;
     /** @private */
     private _getSigner;
 }

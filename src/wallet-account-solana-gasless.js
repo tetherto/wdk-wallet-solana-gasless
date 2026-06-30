@@ -145,12 +145,19 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   /**
    * Sends a transaction.
    *
-   * @param {SolanaTransaction} tx - The transaction.
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+   * @note When an already-signed transaction is passed, it is broadcast directly to the network. The paymaster has already co-signed it at sign time, so it is not contacted again, and the fee/max-fee check (already enforced during `signTransaction`) is skipped. The returned `fee` is `0n`, as the gasless payment amount is locked into the signed message and cannot be recomputed.
    */
   async sendTransaction (tx, config = {}) {
+    if (this._isSignedTransaction(tx)) {
+      const hash = await this._broadcastSignedTransaction(tx)
+
+      return { hash, fee: 0n }
+    }
+
     const mergedConfig = { ...this._config, ...config }
 
     const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config)
@@ -254,6 +261,23 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     )
 
     return { fee: BigInt(fee), transactionMessage }
+  }
+
+  /**
+   * Broadcasts an already-signed transaction directly to the network, bypassing the paymaster.
+   *
+   * @private
+   * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+   * @returns {Promise<string>} The transaction's signature.
+   */
+  async _broadcastSignedTransaction (signedTransaction) {
+    if (!this._rpc) {
+      throw new Error('The wallet must be connected to a provider to send transactions.')
+    }
+
+    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+
+    return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
   }
 
   /** @private */

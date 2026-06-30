@@ -496,6 +496,61 @@ describe('WalletAccountSolanaGasless', () => {
           })
         ).rejects.toThrow('does not match paymaster address')
     })
+
+    test('should broadcast an already-signed transaction directly via the rpc, bypassing the paymaster', async () => {
+      mockRpc.sendTransaction = jest.fn().mockReturnValue({
+        send: jest.fn().mockResolvedValue('signed-broadcast-sig')
+      })
+
+      const signedTx = await account.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      mockPaymaster.signAndSendTransaction.mockClear()
+
+      const result = await account.sendTransaction(signedTx)
+
+      expect(result).toEqual({ hash: 'signed-broadcast-sig', fee: 0n })
+      expect(mockRpc.sendTransaction).toHaveBeenCalled()
+      expect(mockPaymaster.signAndSendTransaction).not.toHaveBeenCalled()
+    })
+
+    test('should skip the max-fee check when sending an already-signed transaction', async () => {
+      mockRpc.sendTransaction = jest.fn().mockReturnValue({
+        send: jest.fn().mockResolvedValue('signed-broadcast-sig')
+      })
+
+      const signedTx = await account.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 0n }
+      )
+
+      const result = await limitedAccount.sendTransaction(signedTx)
+
+      expect(result).toEqual({ hash: 'signed-broadcast-sig', fee: 0n })
+    })
+
+    test('should throw when quoting an already-signed transaction', async () => {
+      mockRpc.sendTransaction = jest.fn().mockReturnValue({
+        send: jest.fn().mockResolvedValue('signed-broadcast-sig')
+      })
+
+      const signedTx = await account.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      await expect(
+        account.quoteSendTransaction(signedTx)
+      ).rejects.toThrow('Cannot quote an already-signed transaction')
+    })
   })
 
   describe('signTransaction', () => {

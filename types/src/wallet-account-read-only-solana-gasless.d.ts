@@ -67,9 +67,10 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     /**
      * Quotes the costs of a send transaction operation.
      *
-     * @param {SolanaTransaction} tx - The transaction.
+     * @param {SolanaTransaction} tx - The transaction. Only unsigned transactions are supported.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     * @throws {Error} If an already-signed transaction is passed. The gasless payment amount is determined by the paymaster (which appends a payment instruction), so it cannot be quoted for a transaction whose message is already signed and frozen.
      */
     quoteSendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransactionResult, "hash">>;
     /**
@@ -163,6 +164,15 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
      */
     protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<GetPaymentInstructionResponse>;
+    /**
+     * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
+     * rather than an unsigned {@link SolanaTransaction}.
+     *
+     * @protected
+     * @param {SolanaTransaction | import('@solana/transactions').FullySignedTransaction} tx - The transaction to inspect.
+     * @returns {boolean} True if the value is a signed transaction.
+     */
+    protected _isSignedTransaction(tx: SolanaTransaction | import('@solana/transactions').FullySignedTransaction): boolean;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
