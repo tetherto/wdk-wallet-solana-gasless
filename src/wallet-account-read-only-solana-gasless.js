@@ -56,7 +56,7 @@ import { ConfigurationError } from './errors.js'
  * @property {PaymasterTokenConfig} paymasterToken - The paymaster token configuration.
  */
 
-/** @typedef {Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken"> & Pick<SolanaWalletConfig, "transferMaxFee">>} SolanaGaslessWalletPaymasterConfigOverrides */
+/** @typedef {Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken"> & Pick<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">>} SolanaGaslessWalletPaymasterConfigOverrides */
 
 /** @typedef {SolanaWalletConfig & SolanaGaslessWalletPaymasterConfig} SolanaGaslessWalletConfig */
 
@@ -67,7 +67,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * Creates a new solana read-only wallet account.
    *
    * @param {string} addr - The account's address.
-   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>} config - The configuration object.
+   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} config - The configuration object.
    */
   constructor (addr, config) {
     WalletAccountReadOnlySolanaGasless._validateConfig(config)
@@ -80,7 +80,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>}
+     * @type {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
      */
     this._config = config
 
@@ -263,7 +263,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * Validates the configuration to ensure all required fields are present.
    *
    * @protected
-   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>} config - The configuration to validate.
+   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} config - The configuration to validate.
    * @throws {ConfigurationError} If the configuration is invalid or has missing required fields.
    * @returns {void}
    */
@@ -295,7 +295,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * Creates a FailoverProvider from the configured providers. If only one provider is supplied, it is wrapped and returned.
    *
    * @protected
-   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>} [config] - The configuration object.
+   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
    * @returns {KoraClient} A wrapped KoraClient instance.
    * @throws {ConfigurationError} If the `paymasterUrl` option is set to an empty array.
    */

@@ -3,16 +3,16 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * Creates a new solana read-only wallet account.
      *
      * @param {string} addr - The account's address.
-     * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>} config - The configuration object.
+     * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} config - The configuration object.
      */
-    constructor(addr: string, config: Omit<SolanaGaslessWalletConfig, "transferMaxFee">);
+    constructor(addr: string, config: Omit<SolanaGaslessWalletConfig, "transferMaxFee" | "transactionMaxFee">);
     /**
      * The read-only wallet account configuration.
      *
      * @protected
-     * @type {Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>}
+     * @type {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
      */
-    protected _config: Omit<SolanaGaslessWalletConfig, "transferMaxFee">;
+    protected _config: Omit<SolanaGaslessWalletConfig, "transferMaxFee" | "transactionMaxFee">;
     /** @private */
     private _solanaReadOnlyAccount;
     /**
@@ -196,7 +196,7 @@ export type SolanaGaslessWalletPaymasterConfig = {
      */
     paymasterToken: PaymasterTokenConfig;
 };
-export type SolanaGaslessWalletPaymasterConfigOverrides = Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken"> & Pick<SolanaWalletConfig, "transferMaxFee">>;
+export type SolanaGaslessWalletPaymasterConfigOverrides = Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken"> & Pick<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">>;
 export type SolanaGaslessWalletConfig = SolanaWalletConfig & SolanaGaslessWalletPaymasterConfig;
 import { WalletAccountReadOnly } from '@tetherto/wdk-wallet';
 import { KoraClient } from '@solana/kora';

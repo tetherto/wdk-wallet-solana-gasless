@@ -441,6 +441,51 @@ describe('WalletAccountSolanaGasless', () => {
         )
     })
 
+    test('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 0n }
+      )
+
+      await expect(
+        limitedAccount.sendTransaction({
+          to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+          value: 1000000n
+        })
+      ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
+    test('should allow a fee exactly equal to transactionMaxFee', async () => {
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5000n }
+      )
+
+      const result = await limitedAccount.sendTransaction({
+        to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+        value: 1000000n
+      })
+
+      expect(result).toHaveProperty('hash')
+    })
+
+    test('should allow a fee below transactionMaxFee', async () => {
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5001n }
+      )
+
+      const result = await limitedAccount.sendTransaction({
+        to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+        value: 1000000n
+      })
+
+      expect(result).toHaveProperty('hash')
+    })
+
     test('should throw if fee payer does not match paymaster', async () => {
         await expect(
           account.sendTransaction({
@@ -487,6 +532,51 @@ describe('WalletAccountSolanaGasless', () => {
       const hash = await mockRpc.sendTransaction(encoded, { encoding: 'base64' }).send()
 
       expect(hash).toBe('manual-broadcast-sig-xyz')
+    })
+
+    test('should throw if transaction fee exceeds the transaction max fee configuration', async () => {
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 0n }
+      )
+
+      await expect(
+        limitedAccount.signTransaction({
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        })
+      ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
+    test('should allow a fee exactly equal to transactionMaxFee', async () => {
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5000n }
+      )
+
+      const signedTx = await limitedAccount.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      expect(signedTx).toBeTruthy()
+    })
+
+    test('should allow a fee below transactionMaxFee', async () => {
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5001n }
+      )
+
+      const signedTx = await limitedAccount.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      expect(signedTx).toBeTruthy()
     })
 
     test('should throw when signing a transaction after disposal', async () => {

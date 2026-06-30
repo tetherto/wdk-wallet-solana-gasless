@@ -59,6 +59,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaTransaction} tx - The transaction to sign.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<FullySignedTransaction>} The signed transaction.
+     * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
      */
     signTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<FullySignedTransaction>;
     /**
@@ -67,6 +68,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaTransaction} tx - The transaction.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransactionResult>} The transaction's result.
+     * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
      */
     sendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
     /**
@@ -75,6 +77,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {TransferOptions} options - The transfer's options.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransferResult>} The transfer's result.
+     * @throws {Error} If the transfer's cost exceeds the maximum transfer fee option.
      */
     transfer({ token, recipient, amount }: TransferOptions, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransferResult>;
     /**
