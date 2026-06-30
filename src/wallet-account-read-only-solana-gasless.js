@@ -25,7 +25,7 @@ import { appendTransactionMessageInstruction, appendTransactionMessageInstructio
 import { KoraClient } from '@solana/kora'
 import { compileTransaction, getBase64EncodedWireTransaction } from '@solana/transactions'
 import { findAssociatedTokenPda, getCreateAssociatedTokenIdempotentInstruction, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
-import { AccountRole, createNoopSigner, pipe } from '@solana/kit'
+import { AccountRole, blockhash, createNoopSigner, pipe } from '@solana/kit'
 import { getTransferSolInstruction } from '@solana-program/system'
 
 import { ConfigurationError } from './errors.js'
@@ -244,9 +244,11 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     })
 
     // Get latest blockhash
-    const { value: latestBlockhash } = await this._rpc
-      .getLatestBlockhash({ commitment: this._commitment })
-      .send()
+    const { blockhash: recentBlockhash } = await this._paymaster.getBlockhash()
+    const latestBlockhash = {
+      blockhash: blockhash(recentBlockhash),
+      lastValidBlockHeight: 0n
+    }
 
     // Build transaction message using pipe
     const transactionMessage = pipe(
@@ -392,9 +394,11 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     instructions.push(transferInstruction)
 
     // Get latest blockhash
-    const { value: latestBlockhash } = await this._rpc
-      .getLatestBlockhash({ commitment: this._commitment })
-      .send()
+    const { blockhash: recentBlockhash } = await this._paymaster.getBlockhash()
+    const latestBlockhash = {
+      blockhash: blockhash(recentBlockhash),
+      lastValidBlockHeight: 0n
+    }
 
     // Build transaction message using pipe
     const transactionMessage = pipe(
