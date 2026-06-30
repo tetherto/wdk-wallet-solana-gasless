@@ -23,10 +23,11 @@ const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://dummyurl.com'
 const TEST_PAYMASTER_URL = 'https://dummypaymaster.com'
-const TEST_PAYMASTER_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
+const TEST_PAYMASTER_ADDRESS = 'CyTi1U4TQt8MddAt54cez6rTJKZWvfjXNLvd3dVeveBz'
 const TEST_PAYMASTER_TOKEN = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 const TEST_PAYMASTER_TOKEN_OVERRIDE = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
+const TEST_RECIPIENT_ADDRESS = '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ'
 const DUMMY_SIGNATURE = 'dummy-signature-123'
 
 const TEST_CONFIG = {
@@ -356,7 +357,7 @@ describe('WalletAccountSolanaGasless', () => {
 
         await expect(
           tempAccount.sendTransaction({
-            to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+            to: TEST_RECIPIENT_ADDRESS,
             value: 1000n
           })
         ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
@@ -364,7 +365,7 @@ describe('WalletAccountSolanaGasless', () => {
 
     test('should successfully send a transaction', async () => {
         const result = await account.sendTransaction({
-          to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+          to: TEST_RECIPIENT_ADDRESS,
           value: 1000000n
         })
 
@@ -377,12 +378,12 @@ describe('WalletAccountSolanaGasless', () => {
 
     test('should successfully send a transaction with number value', async () => {
         await account.sendTransaction({
-          to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+          to: TEST_RECIPIENT_ADDRESS,
           value: 1000000n
         })
 
         await account.sendTransaction({
-          to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+          to: TEST_RECIPIENT_ADDRESS,
           value: 1000000
         })
 
@@ -425,7 +426,7 @@ describe('WalletAccountSolanaGasless', () => {
 
     test('should use paymaster token override when sending a transaction', async () => {
         await account.sendTransaction({
-          to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+          to: TEST_RECIPIENT_ADDRESS,
           value: 1000000n
         }, {
           paymasterToken: {
@@ -446,11 +447,25 @@ describe('WalletAccountSolanaGasless', () => {
             version: 0,
             instructions: [],
             feePayer: {
-              address: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ'
+              address: TEST_RECIPIENT_ADDRESS
             }
           })
         ).rejects.toThrow('does not match paymaster address')
     })
+
+    test('should request signing with the configured paymaster as signer', async () => {
+        await account.sendTransaction({
+          to: TEST_RECIPIENT_ADDRESS,
+          value: 1000000n
+        })
+
+        expect(mockPaymaster.signAndSendTransaction).toHaveBeenCalledWith(
+          expect.objectContaining({
+            signer_key: TEST_PAYMASTER_ADDRESS
+          })
+        )
+    })
+
   })
 
   describe('signTransaction', () => {
@@ -490,6 +505,20 @@ describe('WalletAccountSolanaGasless', () => {
         })
       ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
     })
+
+    test('should request signing with the configured paymaster as signer', async () => {
+      await account.signTransaction({
+        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+        value: 1000000n
+      })
+
+      expect(mockPaymaster.signTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signer_key: TEST_PAYMASTER_ADDRESS
+        })
+      )
+    })
+
   })
 
   describe('transfer', () => {
@@ -521,7 +550,7 @@ describe('WalletAccountSolanaGasless', () => {
         await expect(
           tempAccount.transfer({
             token: TEST_PAYMASTER_TOKEN,
-            recipient: TEST_PAYMASTER_ADDRESS,
+            recipient: TEST_RECIPIENT_ADDRESS,
             amount: 1000n
           })
         ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
@@ -531,7 +560,7 @@ describe('WalletAccountSolanaGasless', () => {
         await expect(
           account.transfer({
             token: TEST_PAYMASTER_TOKEN,
-            recipient: TEST_PAYMASTER_ADDRESS,
+            recipient: TEST_RECIPIENT_ADDRESS,
             amount: 0xffffffffffffffffn + 1n
           })
         ).rejects.toThrow('Amount exceeds u64 maximum value')
@@ -541,7 +570,7 @@ describe('WalletAccountSolanaGasless', () => {
         await expect(
           account.transfer({
             token: TEST_PAYMASTER_TOKEN,
-            recipient: TEST_PAYMASTER_ADDRESS,
+            recipient: TEST_RECIPIENT_ADDRESS,
             amount: Number.MAX_SAFE_INTEGER + 1
           })
         ).rejects.toThrow('Amount exceeds safe integer range')
@@ -560,7 +589,7 @@ describe('WalletAccountSolanaGasless', () => {
         await expect(
           limitedAccount.transfer({
             token: TEST_PAYMASTER_TOKEN,
-            recipient: TEST_PAYMASTER_ADDRESS,
+            recipient: TEST_RECIPIENT_ADDRESS,
             amount: 1000n
           })
         ).rejects.toThrow('Exceeded maximum fee cost')
@@ -570,7 +599,7 @@ describe('WalletAccountSolanaGasless', () => {
         await expect(
           account.transfer({
             token: TEST_PAYMASTER_TOKEN,
-            recipient: TEST_PAYMASTER_ADDRESS,
+            recipient: TEST_RECIPIENT_ADDRESS,
             amount: 1000n
           }, {
             transferMaxFee: 1000n
@@ -581,7 +610,7 @@ describe('WalletAccountSolanaGasless', () => {
     test('should successfully transfer tokens', async () => {
         const result = await account.transfer({
           token: TEST_PAYMASTER_TOKEN,
-          recipient: TEST_PAYMASTER_ADDRESS,
+          recipient: TEST_RECIPIENT_ADDRESS,
           amount: 1000000n
         })
         expect(result).toEqual({

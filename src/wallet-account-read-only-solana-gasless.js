@@ -454,7 +454,8 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
       transaction: draft,
       fee_token: mergedConfig.paymasterToken.address,
       source_wallet: addr,
-      token_program_id: TOKEN_PROGRAM_ADDRESS
+      token_program_id: TOKEN_PROGRAM_ADDRESS,
+      signer_key: this._config.paymasterAddress
     })
 
     const upgradedPaymentInstruction = {
