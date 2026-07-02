@@ -97,6 +97,9 @@ function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
     }),
     signAndSendTransaction: jest.fn().mockResolvedValue({
       signature: DUMMY_SIGNATURE
+    }),
+    getBlockhash: jest.fn().mockResolvedValue({
+      blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T'
     })
   }
 }

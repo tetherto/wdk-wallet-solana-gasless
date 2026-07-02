@@ -64,6 +64,9 @@ function createMockPaymaster () {
         ],
         data: new Uint8Array()
       }
+    }),
+    getBlockhash: jest.fn().mockResolvedValue({
+      blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T'
     })
   }
 }
@@ -351,14 +354,6 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
 
   describe('quoteTransfer', () => {
     beforeEach(() => {
-      mockRpc.getLatestBlockhash.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T',
-            lastValidBlockHeight: 100000n
-          }
-        })
-      })
       mockRpc.getAccountInfo.mockReturnValue({
         send: jest.fn().mockResolvedValue({
           value: {
