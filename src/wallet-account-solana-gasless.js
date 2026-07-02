@@ -132,7 +132,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     const encodedTransaction = getBase64EncodedWireTransaction(partiallySignedTransactionMessage)
 
     const { signed_transaction: signedTransaction } = await this._paymaster.signTransaction({
-      transaction: encodedTransaction
+      transaction: encodedTransaction,
+      signer_key: this._config.paymasterAddress
     })
 
     const fullySignedTransaction = getTransactionDecoder().decode(getBase64Encoder().encode(signedTransaction))
@@ -163,7 +164,10 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
     const encodedTransaction = getBase64EncodedWireTransaction(partiallySignedTransactionMessage)
 
-    const { signature: hash } = await this._paymaster.signAndSendTransaction({ transaction: encodedTransaction })
+    const { signature: hash } = await this._paymaster.signAndSendTransaction({
+      transaction: encodedTransaction,
+      signer_key: this._config.paymasterAddress
+    })
 
     return { hash, fee }
   }
@@ -191,7 +195,10 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
     const encodedTransaction = getBase64EncodedWireTransaction(partiallySignedTransactionMessage)
 
-    const { signature: hash } = await this._paymaster.signAndSendTransaction({ transaction: encodedTransaction })
+    const { signature: hash } = await this._paymaster.signAndSendTransaction({
+      transaction: encodedTransaction,
+      signer_key: this._config.paymasterAddress
+    })
 
     return { hash, fee }
   }

@@ -22,7 +22,7 @@ const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mock-url.com'
 const TEST_PAYMASTER_URL = 'https://mock-paymaster.com'
-const TEST_PAYMASTER_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
+const TEST_PAYMASTER_ADDRESS = 'CyTi1U4TQt8MddAt54cez6rTJKZWvfjXNLvd3dVeveBz'
 const TEST_PAYMASTER_TOKEN = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
 
 const TEST_CONFIG = {

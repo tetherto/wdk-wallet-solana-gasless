@@ -20,6 +20,8 @@ import { AccountRole } from '@solana/kit'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
+const TEST_PAYMASTER_ADDRESS = 'CyTi1U4TQt8MddAt54cez6rTJKZWvfjXNLvd3dVeveBz'
+const TEST_RECIPIENT_ADDRESS = '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ'
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
 const TEST_RPC_URL = 'https://mockurl.com'
@@ -31,7 +33,7 @@ const TEST_CONFIG = {
   provider: TEST_RPC_URL,
   commitment: 'confirmed',
   paymasterUrl: TEST_PAYMASTER_URL,
-  paymasterAddress: TEST_ADDRESS,
+  paymasterAddress: TEST_PAYMASTER_ADDRESS,
   paymasterToken: {
     address: TEST_PAYMASTER_TOKEN
   }
@@ -115,7 +117,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
         new WalletAccountReadOnlySolanaGasless(TEST_ADDRESS, {
           provider: TEST_RPC_URL,
           paymasterUrl: TEST_PAYMASTER_URL,
-          paymasterAddress: TEST_ADDRESS
+          paymasterAddress: TEST_PAYMASTER_ADDRESS
         })
       }).toThrow(
         'Missing required paymaster token configuration fields: paymasterToken.'
@@ -271,7 +273,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
 
     test('should quote fee for native SOL transfer with bigint value', async () => {
       const result = await readOnlyAccount.quoteSendTransaction({
-        to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+        to: TEST_RECIPIENT_ADDRESS,
         value: 1000000000n
       })
 
@@ -281,7 +283,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
 
     test('should quote fee for native SOL transfer with number value', async () => {
       const result = await readOnlyAccount.quoteSendTransaction({
-        to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+        to: TEST_RECIPIENT_ADDRESS,
         value: 1000000000
       })
 
@@ -290,7 +292,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
 
     test('should use paymaster token override when quoting fee', async () => {
       await readOnlyAccount.quoteSendTransaction({
-        to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+        to: TEST_RECIPIENT_ADDRESS,
         value: 1000000000n
       }, {
         paymasterToken: {
@@ -315,7 +317,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
       })
 
       const result = await account.quoteSendTransaction({
-        to: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ',
+        to: TEST_RECIPIENT_ADDRESS,
         value: 1000000000n
       })
 
@@ -327,10 +329,24 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
         readOnlyAccount.quoteSendTransaction({
           version: 0,
           instructions: [],
-          feePayer: '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ'
+          feePayer: TEST_RECIPIENT_ADDRESS
         })
       ).rejects.toThrow('does not match paymaster address')
     })
+
+    test('should request payment instruction with the configured paymaster as signer', async () => {
+      await readOnlyAccount.quoteSendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000000n
+      })
+
+      expect(mockPaymaster.getPaymentInstruction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          signer_key: TEST_PAYMASTER_ADDRESS
+        })
+      )
+    })
+
   })
 
   describe('quoteTransfer', () => {
@@ -357,7 +373,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
     test('should quote fee when recipient ATA exists', async () => {
       const result = await readOnlyAccount.quoteTransfer({
         token: TEST_PAYMASTER_TOKEN,
-        recipient: TEST_ADDRESS,
+        recipient: TEST_RECIPIENT_ADDRESS,
         amount: 1000000n
       })
 
@@ -367,7 +383,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
     test('should handle number amount', async () => {
       const result = await readOnlyAccount.quoteTransfer({
         token: TEST_PAYMASTER_TOKEN,
-        recipient: TEST_ADDRESS,
+        recipient: TEST_RECIPIENT_ADDRESS,
         amount: 1000000
       })
 
@@ -381,7 +397,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
 
       const result = await readOnlyAccount.quoteTransfer({
         token: TEST_PAYMASTER_TOKEN,
-        recipient: TEST_ADDRESS,
+        recipient: TEST_RECIPIENT_ADDRESS,
         amount: 1000000n
       })
 
