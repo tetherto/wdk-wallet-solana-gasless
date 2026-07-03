@@ -161,16 +161,11 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   /**
    * Quotes the costs of a send transaction operation.
    *
-   * @param {SolanaTransaction} tx - The transaction. Only unsigned transactions are supported.
+   * @param {SolanaTransaction} tx - The transaction.
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
-   * @throws {Error} If an already-signed transaction is passed. The gasless payment amount is determined by the paymaster (which appends a payment instruction), so it cannot be quoted for a transaction whose message is already signed and frozen.
    */
   async quoteSendTransaction (tx, config = {}) {
-    if (this._isSignedTransaction(tx)) {
-      throw new Error('Cannot quote an already-signed transaction on a gasless wallet: the gasless payment amount is fixed at sign time.')
-    }
-
     let transactionMessage = tx
 
     // Handle native token transfer { to, value } transaction

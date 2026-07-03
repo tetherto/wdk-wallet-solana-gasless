@@ -1,4 +1,4 @@
-export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless implements IWalletAccount {
+export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless implements IWalletAccount<FullySignedTransaction> {
     /**
      * Creates a new solana gasless wallet account.
      *

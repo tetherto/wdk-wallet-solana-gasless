@@ -536,21 +536,6 @@ describe('WalletAccountSolanaGasless', () => {
 
       expect(result).toEqual({ hash: 'signed-broadcast-sig', fee: 0n })
     })
-
-    test('should throw when quoting an already-signed transaction', async () => {
-      mockRpc.sendTransaction = jest.fn().mockReturnValue({
-        send: jest.fn().mockResolvedValue('signed-broadcast-sig')
-      })
-
-      const signedTx = await account.signTransaction({
-        to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
-        value: 1000000n
-      })
-
-      await expect(
-        account.quoteSendTransaction(signedTx)
-      ).rejects.toThrow('Cannot quote an already-signed transaction')
-    })
   })
 
   describe('signTransaction', () => {

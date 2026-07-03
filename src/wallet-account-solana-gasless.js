@@ -39,7 +39,7 @@ import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solan
 /** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
 /** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfigOverrides} SolanaGaslessWalletPaymasterConfigOverrides */
 
-/** @implements {IWalletAccount} */
+/** @implements {IWalletAccount<FullySignedTransaction>} */
 export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless {
   /**
    * Creates a new solana gasless wallet account.

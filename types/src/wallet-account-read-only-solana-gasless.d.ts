@@ -67,10 +67,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     /**
      * Quotes the costs of a send transaction operation.
      *
-     * @param {SolanaTransaction} tx - The transaction. Only unsigned transactions are supported.
+     * @param {SolanaTransaction} tx - The transaction.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
-     * @throws {Error} If an already-signed transaction is passed. The gasless payment amount is determined by the paymaster (which appends a payment instruction), so it cannot be quoted for a transaction whose message is already signed and frozen.
      */
     quoteSendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransactionResult, "hash">>;
     /**
