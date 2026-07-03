@@ -176,6 +176,22 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /**
+   * Quotes the costs of a send transaction operation.
+   *
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
+   * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
+   * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   * @note When an already-signed transaction is passed, the gasless payment amount is locked into the signed message and cannot be recomputed, so the returned `fee` is `0n` (matching `sendTransaction`).
+   */
+  async quoteSendTransaction (tx, config = {}) {
+    if (this._isSignedTransaction(tx)) {
+      return { fee: 0n }
+    }
+
+    return await super.quoteSendTransaction(tx, config)
+  }
+
+  /**
    * Transfers a token to another address. Native SOL transfers are not supported here.
    *
    * @param {TransferOptions} options - The transfer's options.

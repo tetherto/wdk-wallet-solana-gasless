@@ -73,6 +73,15 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      */
     sendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
     /**
+     * Quotes the costs of a send transaction operation.
+     *
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
+     * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
+     * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     * @note When an already-signed transaction is passed, the gasless payment amount is locked into the signed message and cannot be recomputed, so the returned `fee` is `0n` (matching `sendTransaction`).
+     */
+    quoteSendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransactionResult, "hash">>;
+    /**
      * Transfers a token to another address. Native SOL transfers are not supported here.
      *
      * @param {TransferOptions} options - The transfer's options.
@@ -104,7 +113,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     /** @private */
     private _getSigner;
 }
-export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
+export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
