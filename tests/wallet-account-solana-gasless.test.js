@@ -514,7 +514,7 @@ describe('WalletAccountSolanaGasless', () => {
         )
     })
 
-    test('should broadcast an already-signed transaction directly via the rpc, bypassing the paymaster', async () => {
+    test('should broadcast an already-signed transaction', async () => {
       mockRpc.sendTransaction = jest.fn().mockReturnValue({
         send: jest.fn().mockResolvedValue('signed-broadcast-sig')
       })
@@ -556,7 +556,7 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('quoteSendTransaction', () => {
-    test('should quote an already-signed transaction as a zero fee without broadcasting', async () => {
+    test('should quote an already-signed transaction without broadcasting', async () => {
       mockRpc.sendTransaction = jest.fn().mockReturnValue({
         send: jest.fn().mockResolvedValue('signed-broadcast-sig')
       })
