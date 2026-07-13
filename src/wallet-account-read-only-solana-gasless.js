@@ -440,21 +440,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   }
 
   /**
-   * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
-   * rather than an unsigned {@link SolanaTransaction}.
-   *
-   * @protected
-   * @param {SolanaTransaction | import('@solana/transactions').FullySignedTransaction} tx - The transaction to inspect.
-   * @returns {boolean} True if the value is a signed transaction.
-   */
-  _isSignedTransaction (tx) {
-    return tx !== null &&
-      typeof tx === 'object' &&
-      tx.messageBytes !== undefined &&
-      tx.signatures !== undefined
-  }
-
-  /**
    * Fetch the payment info for a given transaction message.
    *
    * @protected

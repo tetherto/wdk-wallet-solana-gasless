@@ -163,15 +163,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
      */
     protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<GetPaymentInstructionResponse>;
-    /**
-     * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
-     * rather than an unsigned {@link SolanaTransaction}.
-     *
-     * @protected
-     * @param {SolanaTransaction | import('@solana/transactions').FullySignedTransaction} tx - The transaction to inspect.
-     * @returns {boolean} True if the value is a signed transaction.
-     */
-    protected _isSignedTransaction(tx: SolanaTransaction | import('@solana/transactions').FullySignedTransaction): boolean;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;

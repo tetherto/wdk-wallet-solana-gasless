@@ -303,6 +303,21 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
   }
 
+  /**
+   * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
+   * rather than an unsigned {@link SolanaTransaction}.
+   *
+   * @protected
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction to inspect.
+   * @returns {boolean} True if the value is a signed transaction.
+   */
+  _isSignedTransaction (tx) {
+    return tx !== null &&
+      typeof tx === 'object' &&
+      tx.messageBytes !== undefined &&
+      tx.signatures !== undefined
+  }
+
   /** @private */
   async _getSigner () {
     if (!this._signer) {
