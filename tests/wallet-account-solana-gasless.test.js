@@ -17,7 +17,8 @@
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals'
 
 import { getBase64EncodedWireTransaction, getTransactionDecoder, isFullySignedTransaction } from '@solana/transactions'
-import { AccountRole, getBase64Encoder } from '@solana/kit'
+import { address, getBase64Encoder } from '@solana/kit'
+import { findAssociatedTokenPda, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 
 const TEST_SEED_PHRASE =
   'test walk nut penalty hip pave soap entry language right filter choice'
@@ -70,17 +71,29 @@ function createMockRpcWithRecipientAta () {
 
 function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
   return {
-    getPaymentInstruction: jest.fn().mockResolvedValue({
-      payment_amount: '5000',
-      payment_instruction: {
-        programAddress: '11111111111111111111111111111111',
-        accounts: [
-          {
-            address: accountAddress,
-            role: AccountRole.READONLY_SIGNER
-          }
-        ],
-        data: new Uint8Array()
+    getPaymentInstruction: jest.fn().mockImplementation(async () => {
+      const [paymasterTokenAccount] = await findAssociatedTokenPda({
+        mint: address(TEST_PAYMASTER_TOKEN),
+        owner: address(TEST_PAYMASTER_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
+      const [sourceTokenAccount] = await findAssociatedTokenPda({
+        mint: address(TEST_PAYMASTER_TOKEN),
+        owner: address(accountAddress),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
+      const paymentInstruction = getTransferInstruction({
+        source: sourceTokenAccount,
+        destination: paymasterTokenAccount,
+        authority: address(accountAddress),
+        amount: 5000n
+      })
+
+      return {
+        payment_amount: '5000',
+        payment_instruction: paymentInstruction
       }
     }),
     signTransaction: jest.fn().mockImplementation(async ({ transaction }) => {
@@ -528,12 +541,12 @@ describe('WalletAccountSolanaGasless', () => {
 
       const result = await account.sendTransaction(signedTx)
 
-      expect(result).toEqual({ hash: 'signed-broadcast-sig', fee: 0n })
+      expect(result).toEqual({ hash: 'signed-broadcast-sig', fee: 5000n })
       expect(mockRpc.sendTransaction).toHaveBeenCalled()
       expect(mockPaymaster.signAndSendTransaction).not.toHaveBeenCalled()
     })
 
-    test('should skip the max-fee check when sending an already-signed transaction', async () => {
+    test('should enforce the max-fee check when sending an already-signed transaction', async () => {
       mockRpc.sendTransaction = jest.fn().mockReturnValue({
         send: jest.fn().mockResolvedValue('signed-broadcast-sig')
       })
@@ -549,9 +562,9 @@ describe('WalletAccountSolanaGasless', () => {
         { ...TEST_CONFIG, transactionMaxFee: 0n }
       )
 
-      const result = await limitedAccount.sendTransaction(signedTx)
-
-      expect(result).toEqual({ hash: 'signed-broadcast-sig', fee: 0n })
+      await expect(limitedAccount.sendTransaction(signedTx))
+        .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      expect(mockRpc.sendTransaction).not.toHaveBeenCalled()
     })
   })
 
@@ -570,7 +583,7 @@ describe('WalletAccountSolanaGasless', () => {
 
       const { fee } = await account.quoteSendTransaction(signedTx)
 
-      expect(fee).toBe(0n)
+      expect(fee).toBe(5000n)
       expect(mockRpc.sendTransaction).not.toHaveBeenCalled()
       expect(mockPaymaster.signAndSendTransaction).not.toHaveBeenCalled()
     })

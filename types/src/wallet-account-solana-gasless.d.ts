@@ -69,7 +69,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
-     * @note When an already-signed transaction is passed, it is broadcast directly to the network. The paymaster has already co-signed it at sign time, so it is not contacted again, and the fee/max-fee check (already enforced during `signTransaction`) is skipped. The returned `fee` is `0n`, as the gasless payment amount is locked into the signed message and cannot be recomputed.
+     * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting.
      */
     sendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
     /**
@@ -78,7 +78,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
-     * @note When an already-signed transaction is passed, the gasless payment amount is locked into the signed message and cannot be recomputed, so the returned `fee` is `0n` (matching `sendTransaction`).
+     * @note When an already-signed transaction is passed, the returned `fee` is decoded from the gasless payment instruction embedded in the signed message (matching `sendTransaction`).
      */
     quoteSendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransactionResult, "hash">>;
     /**
@@ -111,14 +111,25 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      */
     private _broadcastSignedTransaction;
     /**
+     * Decodes the gasless payment fee embedded in an already-signed transaction by locating the
+     * SPL token transfer instruction that pays the paymaster's associated token account. The Kora
+     * payment amount is encoded as a `u64` in that instruction, so the fee can be recovered from
+     * the signed message without contacting the paymaster.
+     *
+     * @private
+     * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+     * @returns {Promise<bigint>} The gasless payment amount (in the paymaster token's base units).
+     */
+    private _getSignedTransactionFee;
+    /**
      * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
      * rather than an unsigned {@link SolanaTransaction}.
      *
      * @protected
      * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction to inspect.
-     * @returns {boolean} True if the value is a signed transaction.
+     * @returns {tx is FullySignedTransaction} True if the value is a signed transaction.
      */
-    protected _isSignedTransaction(tx: SolanaTransaction | FullySignedTransaction): boolean;
+    protected _isSignedTransaction(tx: SolanaTransaction | FullySignedTransaction): tx is FullySignedTransaction;
     /** @private */
     private _getSigner;
 }
