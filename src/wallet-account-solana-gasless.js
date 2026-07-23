@@ -20,7 +20,8 @@ import { createKeyPairSignerFromPrivateKeyBytes, partiallySignTransactionMessage
 import { assertIsFullySignedTransaction, getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { appendTransactionMessageInstruction, setTransactionMessageFeePayer } from '@solana/transaction-messages'
 import { address } from '@solana/addresses'
-import { AccountRole, getBase64Encoder, pipe } from '@solana/kit'
+import { AccountRole, decompileTransactionMessageFetchingLookupTables, getBase64Encoder, getCompiledTransactionMessageDecoder, getU64Decoder, pipe } from '@solana/kit'
+import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 
 import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solana-gasless.js'
 
@@ -39,7 +40,7 @@ import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solan
 /** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
 /** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfigOverrides} SolanaGaslessWalletPaymasterConfigOverrides */
 
-/** @implements {IWalletAccount} */
+/** @implements {IWalletAccount<FullySignedTransaction>} */
 export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless {
   /**
    * Creates a new solana gasless wallet account.
@@ -146,12 +147,27 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   /**
    * Sends a transaction.
    *
-   * @param {SolanaTransaction} tx - The transaction.
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+   * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting.
    */
   async sendTransaction (tx, config = {}) {
+    if (this._isSignedTransaction(tx)) {
+      const mergedConfig = { ...this._config, ...config }
+
+      const fee = await this._getSignedTransactionFee(tx)
+
+      if (mergedConfig.transactionMaxFee !== undefined && fee > mergedConfig.transactionMaxFee) {
+        throw new Error('Exceeded maximum fee cost for transaction operation.')
+      }
+
+      const hash = await this._broadcastSignedTransaction(tx)
+
+      return { hash, fee }
+    }
+
     const mergedConfig = { ...this._config, ...config }
 
     const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config)
@@ -170,6 +186,24 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     })
 
     return { hash, fee }
+  }
+
+  /**
+   * Quotes the costs of a send transaction operation.
+   *
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
+   * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
+   * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   * @note When an already-signed transaction is passed, the returned `fee` is decoded from the gasless payment instruction embedded in the signed message (matching `sendTransaction`).
+   */
+  async quoteSendTransaction (tx, config = {}) {
+    if (this._isSignedTransaction(tx)) {
+      const fee = await this._getSignedTransactionFee(tx)
+
+      return { fee }
+    }
+
+    return await super.quoteSendTransaction(tx, config)
   }
 
   /**
@@ -261,6 +295,75 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     )
 
     return { fee: BigInt(fee), transactionMessage }
+  }
+
+  /**
+   * Broadcasts an already-signed transaction directly to the network, bypassing the paymaster.
+   *
+   * @private
+   * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+   * @returns {Promise<string>} The transaction's signature.
+   */
+  async _broadcastSignedTransaction (signedTransaction) {
+    if (!this._rpc) {
+      throw new Error('The wallet must be connected to a provider to send transactions.')
+    }
+
+    const encodedTransaction = getBase64EncodedWireTransaction(signedTransaction)
+
+    return await this._rpc.sendTransaction(encodedTransaction, { encoding: 'base64' }).send()
+  }
+
+  /**
+   * Decodes the gasless payment fee embedded in an already-signed transaction by locating the
+   * SPL token transfer instruction that pays the paymaster's associated token account. The Kora
+   * payment amount is encoded as a `u64` in that instruction, so the fee can be recovered from
+   * the signed message without contacting the paymaster.
+   *
+   * @private
+   * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+   * @returns {Promise<bigint>} The gasless payment amount (in the paymaster token's base units).
+   */
+  async _getSignedTransactionFee (signedTransaction) {
+    if (!this._rpc) {
+      throw new Error('The wallet must be connected to a provider to quote transactions.')
+    }
+
+    const compiledTransactionMessage = getCompiledTransactionMessageDecoder().decode(signedTransaction.messageBytes)
+
+    const { instructions } = await decompileTransactionMessageFetchingLookupTables(compiledTransactionMessage, this._rpc)
+
+    const [paymasterTokenAccount] = await findAssociatedTokenPda({
+      mint: address(this._config.paymasterToken.address),
+      owner: address(this._config.paymasterAddress),
+      tokenProgram: TOKEN_PROGRAM_ADDRESS
+    })
+
+    const paymentInstruction = instructions.find((instruction) => {
+      const discriminator = instruction.data?.[0]
+      const isTokenTransfer = instruction.programAddress === TOKEN_PROGRAM_ADDRESS && (discriminator === 3 || discriminator === 12)
+
+      return isTokenTransfer && instruction.accounts?.some((account) => account.address === paymasterTokenAccount)
+    })
+
+    const paymentAmount = paymentInstruction && getU64Decoder().decode(paymentInstruction.data, 1)
+
+    return BigInt(paymentAmount || 0n)
+  }
+
+  /**
+   * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
+   * rather than an unsigned {@link SolanaTransaction}.
+   *
+   * @protected
+   * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction to inspect.
+   * @returns {tx is FullySignedTransaction} True if the value is a signed transaction.
+   */
+  _isSignedTransaction (tx) {
+    return tx !== null &&
+      typeof tx === 'object' &&
+      tx.messageBytes !== undefined &&
+      tx.signatures !== undefined
   }
 
   /** @private */
