@@ -1,4 +1,4 @@
-export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless implements IWalletAccount {
+export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless implements IWalletAccount<FullySignedTransaction> {
     /**
      * Creates a new solana gasless wallet account.
      *
@@ -65,12 +65,22 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     /**
      * Sends a transaction.
      *
-     * @param {SolanaTransaction} tx - The transaction.
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+     * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting.
      */
-    sendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
+    sendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
+    /**
+     * Quotes the costs of a send transaction operation.
+     *
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
+     * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
+     * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     * @note When an already-signed transaction is passed, the returned `fee` is decoded from the gasless payment instruction embedded in the signed message (matching `sendTransaction`).
+     */
+    quoteSendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransactionResult, "hash">>;
     /**
      * Transfers a token to another address. Native SOL transfers are not supported here.
      *
@@ -92,10 +102,38 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     dispose(): void;
     /** @private */
     private _populateTransactionMessage;
+    /**
+     * Broadcasts an already-signed transaction directly to the network, bypassing the paymaster.
+     *
+     * @private
+     * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+     * @returns {Promise<string>} The transaction's signature.
+     */
+    private _broadcastSignedTransaction;
+    /**
+     * Decodes the gasless payment fee embedded in an already-signed transaction by locating the
+     * SPL token transfer instruction that pays the paymaster's associated token account. The Kora
+     * payment amount is encoded as a `u64` in that instruction, so the fee can be recovered from
+     * the signed message without contacting the paymaster.
+     *
+     * @private
+     * @param {FullySignedTransaction} signedTransaction - The signed transaction.
+     * @returns {Promise<bigint>} The gasless payment amount (in the paymaster token's base units).
+     */
+    private _getSignedTransactionFee;
+    /**
+     * Determines whether a value is an already-signed transaction (as returned by `signTransaction`)
+     * rather than an unsigned {@link SolanaTransaction}.
+     *
+     * @protected
+     * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction to inspect.
+     * @returns {tx is FullySignedTransaction} True if the value is a signed transaction.
+     */
+    protected _isSignedTransaction(tx: SolanaTransaction | FullySignedTransaction): tx is FullySignedTransaction;
     /** @private */
     private _getSigner;
 }
-export type IWalletAccount = import("@tetherto/wdk-wallet").IWalletAccount;
+export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
