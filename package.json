@@ -1,6 +1,6 @@
 {
   "name": "@tetherto/wdk-wallet-solana-gasless",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "A simple package to manage BIP-32 wallets for the solana blockchain, which implement the gasless functionality.",
   "keywords": [
     "wdk",
