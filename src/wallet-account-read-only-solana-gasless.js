@@ -40,6 +40,7 @@ import { ConfigurationError } from './errors.js'
 /** @typedef {import('@solana/kora').GetPaymentInstructionResponse} GetPaymentInstructionResponse */
 
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransaction} SolanaTransaction */
+/** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransactionInfo} SolanaTransactionInfo */
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaWalletConfig} SolanaWalletConfig */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
@@ -202,11 +203,32 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   /**
    * Retrieves a transaction receipt by its signature
    *
+   * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The raw transaction remains available on its `transaction` property.
    * @param {string} hash - The transaction's hash.
    * @returns {Promise<SolanaTransactionReceipt | null>} — The receipt, or null if the transaction has not been included in a block yet.
    */
   async getTransactionReceipt (hash) {
     return await this._solanaReadOnlyAccount.getTransactionReceipt(hash)
+  }
+
+  /**
+   * Returns a normalized, finality-based receipt for a transaction.
+   *
+   * @param {string} hash - The transaction's signature.
+   * @returns {Promise<SolanaTransactionInfo | null>} The normalized receipt, or null if the transaction is not known.
+   */
+  async getTransaction (hash) {
+    return await this._solanaReadOnlyAccount.getTransaction(hash)
+  }
+
+  /** @protected @type {number} */
+  get _defaultWaitInterval () {
+    return this._solanaReadOnlyAccount._defaultWaitInterval
+  }
+
+  /** @protected @type {number} */
+  get _defaultWaitTimeout () {
+    return this._solanaReadOnlyAccount._defaultWaitTimeout
   }
 
   /**
