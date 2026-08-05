@@ -463,7 +463,7 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
       const info = await readOnlyAccount.getTransaction(MOCK_TX_SIGNATURE)
 
       expect(info).toMatchObject({
-        id: MOCK_TX_SIGNATURE,
+        hash: MOCK_TX_SIGNATURE,
         finality: 'confirmed',
         success: true,
         fee: 5000n,
