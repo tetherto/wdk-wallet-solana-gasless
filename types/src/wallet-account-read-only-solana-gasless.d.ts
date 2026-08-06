@@ -92,9 +92,11 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * Returns a normalized, finality-based receipt for a transaction.
      *
      * @param {string} hash - The transaction's signature.
-     * @returns {Promise<SolanaTransactionInfo | null>} The normalized receipt, or null if the transaction is not known.
+     * @returns {Promise<SolanaTransactionInfo>} The normalized receipt.
+     * @throws {ValueError} If the hash is not a valid signature.
+     * @throws {NoSuchElementError} If no transaction has been found for the given hash.
      */
-    getTransaction(hash: string): Promise<SolanaTransactionInfo | null>;
+    getTransaction(hash: string): Promise<SolanaTransactionInfo>;
     /** @protected @type {number} */
     protected get _defaultWaitInterval(): number;
     /** @protected @type {number} */

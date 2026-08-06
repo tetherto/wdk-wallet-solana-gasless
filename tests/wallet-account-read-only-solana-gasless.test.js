@@ -17,6 +17,7 @@
 import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 
 import { AccountRole } from '@solana/kit'
+import { NoSuchElementError } from '@tetherto/wdk-wallet'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_PAYMASTER_ADDRESS = 'CyTi1U4TQt8MddAt54cez6rTJKZWvfjXNLvd3dVeveBz'
@@ -440,14 +441,12 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
     const MOCK_TX_SIGNATURE =
       '2k3dxVsXko3Vtb7z2W31GHCbZBzRXCAo5YYqbn7bxUCQM1RQb5Xq1XhWndFGhZGpZ5mGARUx5kavWqFVoBGujpWf'
 
-    test('should return null when the transaction is not known', async () => {
+    test('should throw NoSuchElementError when the transaction is not known', async () => {
       mockRpc.getSignatureStatuses.mockReturnValue({
         send: jest.fn().mockResolvedValue({ value: [null] })
       })
 
-      const info = await readOnlyAccount.getTransaction(MOCK_TX_SIGNATURE)
-
-      expect(info).toBeNull()
+      await expect(readOnlyAccount.getTransaction(MOCK_TX_SIGNATURE)).rejects.toThrow(NoSuchElementError)
     })
 
     test('should report confirmed with success and fee', async () => {
