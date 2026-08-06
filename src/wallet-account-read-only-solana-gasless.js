@@ -223,16 +223,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     return await this._solanaReadOnlyAccount.getTransaction(hash)
   }
 
-  /** @protected @type {number} */
-  get _defaultWaitInterval () {
-    return this._solanaReadOnlyAccount._defaultWaitInterval
-  }
-
-  /** @protected @type {number} */
-  get _defaultWaitTimeout () {
-    return this._solanaReadOnlyAccount._defaultWaitTimeout
-  }
-
   /**
    * Verifies a message's signature.
    *

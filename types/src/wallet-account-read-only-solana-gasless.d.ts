@@ -97,10 +97,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @throws {NoSuchElementError} If no transaction has been found for the given hash.
      */
     getTransaction(hash: string): Promise<SolanaTransactionInfo>;
-    /** @protected @type {number} */
-    protected get _defaultWaitInterval(): number;
-    /** @protected @type {number} */
-    protected get _defaultWaitTimeout(): number;
     /**
      * Verifies a message's signature.
      *
