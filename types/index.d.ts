@@ -12,7 +12,7 @@ export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResul
 export { ConfigurationError } from "./src/errors.js";
 export type FullySignedTransaction = import("./src/wallet-account-solana-gasless.js").FullySignedTransaction;
 export type SolanaTransactionReceipt = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransactionReceipt;
-export type SolanaTransactionDetails = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransactionDetails;
+export type SolanaTransactionDetails = import("@tetherto/wdk-wallet-solana").SolanaTransactionDetails;
 export type SolanaTransaction = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransaction;
 export type PaymasterTokenConfig = import("./src/wallet-account-read-only-solana-gasless.js").PaymasterTokenConfig;
 export type SolanaGaslessWalletPaymasterConfig = import("./src/wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfig;

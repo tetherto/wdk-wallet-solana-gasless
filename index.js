@@ -23,7 +23,7 @@
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
 /** @typedef {import('./src/wallet-account-solana-gasless.js').FullySignedTransaction} FullySignedTransaction */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
-/** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransactionDetails} SolanaTransactionDetails */
+/** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransactionDetails} SolanaTransactionDetails */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').PaymasterTokenConfig} PaymasterTokenConfig */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfig} SolanaGaslessWalletPaymasterConfig */

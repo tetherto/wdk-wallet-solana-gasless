@@ -45,14 +45,7 @@ import { ConfigurationError } from './errors.js'
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaWalletConfig} SolanaWalletConfig */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
-
-/**
- * The Solana-specific fields added to a normalized transaction receipt.
- *
- * @typedef {Object} SolanaTransactionDetails
- * @property {number | null} confirmations - The number of confirmations, or null when the RPC does not report it.
- * @property {SolanaTransactionReceipt | null} transaction - The native Solana transaction, or null while the transaction is pending or dropped.
- */
+/** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransactionDetails} SolanaTransactionDetails */
 
 /**
  * @typedef {Object} PaymasterTokenConfig

@@ -197,19 +197,7 @@ export type SolanaWalletConfig = import("@tetherto/wdk-wallet-solana").SolanaWal
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
 import { ConfigurationError } from './errors.js';
-/**
- * The Solana-specific fields added to a normalized transaction receipt.
- */
-export type SolanaTransactionDetails = {
-    /**
-     * - The number of confirmations, or null when the RPC does not report it.
-     */
-    confirmations: number | null;
-    /**
-     * - The native Solana transaction, or null while the transaction is pending or dropped.
-     */
-    transaction: SolanaTransactionReceipt | null;
-};
+export type SolanaTransactionDetails = import("@tetherto/wdk-wallet-solana").SolanaTransactionDetails;
 export type PaymasterTokenConfig = {
     /**
      * - The address of the paymaster token.
