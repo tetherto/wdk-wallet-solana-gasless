@@ -92,11 +92,20 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * Returns a normalized, finality-based receipt for a transaction.
      *
      * @param {string} hash - The transaction's signature.
-     * @returns {Promise<SolanaTransactionInfo>} The normalized receipt.
+     * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The normalized receipt.
      * @throws {ValueError} If the hash is not a valid signature.
      * @throws {NoSuchElementError} If no transaction has been found for the given hash.
      */
-    getTransaction(hash: string): Promise<SolanaTransactionInfo>;
+    getTransaction(hash: string): Promise<TransactionReceipt & SolanaTransactionDetails>;
+    /**
+     * Blocks until a transaction reaches a terminal state (the requested finality target or `dropped`), or times out.
+     *
+     * @param {string} hash - The transaction's signature.
+     * @param {WaitForTransactionOptions} [options] - The wait options.
+     * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+     * @throws {TimeoutError} If the target is not reached before the timeout.
+     */
+    waitForTransaction(hash: string, options?: WaitForTransactionOptions): Promise<TransactionReceipt & SolanaTransactionDetails>;
     /**
      * Verifies a message's signature.
      *
@@ -175,6 +184,8 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<GetPaymentInstructionResponse>;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
+export type TransactionReceipt = import("@tetherto/wdk-wallet").TransactionReceipt;
+export type WaitForTransactionOptions = import("@tetherto/wdk-wallet").WaitForTransactionOptions;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
 export type SolanaTransactionReceipt = ReturnType<import("@solana/rpc-api").SolanaRpcApi["getTransaction"]>;
@@ -182,11 +193,23 @@ export type Commitment = import("@solana/rpc-types").Commitment;
 export type KoraClientOptions = import("@solana/kora").KoraClientOptions;
 export type GetPaymentInstructionResponse = import("@solana/kora").GetPaymentInstructionResponse;
 export type SolanaTransaction = import("@tetherto/wdk-wallet-solana").SolanaTransaction;
-export type SolanaTransactionInfo = import("@tetherto/wdk-wallet-solana").SolanaTransactionInfo;
 export type SolanaWalletConfig = import("@tetherto/wdk-wallet-solana").SolanaWalletConfig;
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
 import { ConfigurationError } from './errors.js';
+/**
+ * The Solana-specific fields added to a normalized transaction receipt.
+ */
+export type SolanaTransactionDetails = {
+    /**
+     * - The number of confirmations, or null when the RPC does not report it.
+     */
+    confirmations: number | null;
+    /**
+     * - The native Solana transaction, or null while the transaction is pending or dropped.
+     */
+    transaction: SolanaTransactionReceipt | null;
+};
 export type PaymasterTokenConfig = {
     /**
      * - The address of the paymaster token.

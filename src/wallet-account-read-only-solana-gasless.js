@@ -31,6 +31,8 @@ import { getTransferSolInstruction } from '@solana-program/system'
 import { ConfigurationError } from './errors.js'
 
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionReceipt} TransactionReceipt */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionOptions} WaitForTransactionOptions */
 
 /** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 /** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
@@ -40,10 +42,17 @@ import { ConfigurationError } from './errors.js'
 /** @typedef {import('@solana/kora').GetPaymentInstructionResponse} GetPaymentInstructionResponse */
 
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransaction} SolanaTransaction */
-/** @typedef {import('@tetherto/wdk-wallet-solana').SolanaTransactionInfo} SolanaTransactionInfo */
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaWalletConfig} SolanaWalletConfig */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
+
+/**
+ * The Solana-specific fields added to a normalized transaction receipt.
+ *
+ * @typedef {Object} SolanaTransactionDetails
+ * @property {number | null} confirmations - The number of confirmations, or null when the RPC does not report it.
+ * @property {SolanaTransactionReceipt | null} transaction - The native Solana transaction, or null while the transaction is pending or dropped.
+ */
 
 /**
  * @typedef {Object} PaymasterTokenConfig
@@ -215,12 +224,24 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * Returns a normalized, finality-based receipt for a transaction.
    *
    * @param {string} hash - The transaction's signature.
-   * @returns {Promise<SolanaTransactionInfo>} The normalized receipt.
+   * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The normalized receipt.
    * @throws {ValueError} If the hash is not a valid signature.
    * @throws {NoSuchElementError} If no transaction has been found for the given hash.
    */
   async getTransaction (hash) {
     return await this._solanaReadOnlyAccount.getTransaction(hash)
+  }
+
+  /**
+   * Blocks until a transaction reaches a terminal state (the requested finality target or `dropped`), or times out.
+   *
+   * @param {string} hash - The transaction's signature.
+   * @param {WaitForTransactionOptions} [options] - The wait options.
+   * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+   * @throws {TimeoutError} If the target is not reached before the timeout.
+   */
+  async waitForTransaction (hash, options = {}) {
+    return await super.waitForTransaction(hash, options)
   }
 
   /**

@@ -3,12 +3,16 @@ export { default as WalletAccountReadOnlySolanaGasless } from "./src/wallet-acco
 export { default as WalletAccountSolanaGasless } from "./src/wallet-account-solana-gasless.js";
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
+export type Finality = import("@tetherto/wdk-wallet").Finality;
+export type TransactionReceipt = import("@tetherto/wdk-wallet").TransactionReceipt;
+export type WaitForTransactionTarget = import("@tetherto/wdk-wallet").WaitForTransactionTarget;
+export type WaitForTransactionOptions = import("@tetherto/wdk-wallet").WaitForTransactionOptions;
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
 export { ConfigurationError } from "./src/errors.js";
 export type FullySignedTransaction = import("./src/wallet-account-solana-gasless.js").FullySignedTransaction;
 export type SolanaTransactionReceipt = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransactionReceipt;
-export type SolanaTransactionInfo = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransactionInfo;
+export type SolanaTransactionDetails = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransactionDetails;
 export type SolanaTransaction = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransaction;
 export type PaymasterTokenConfig = import("./src/wallet-account-read-only-solana-gasless.js").PaymasterTokenConfig;
 export type SolanaGaslessWalletPaymasterConfig = import("./src/wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfig;

@@ -15,11 +15,15 @@
 
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
+/** @typedef {import('@tetherto/wdk-wallet').Finality} Finality */
+/** @typedef {import('@tetherto/wdk-wallet').TransactionReceipt} TransactionReceipt */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionTarget} WaitForTransactionTarget */
+/** @typedef {import('@tetherto/wdk-wallet').WaitForTransactionOptions} WaitForTransactionOptions */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
 /** @typedef {import('./src/wallet-account-solana-gasless.js').FullySignedTransaction} FullySignedTransaction */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransactionReceipt} SolanaTransactionReceipt */
-/** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransactionInfo} SolanaTransactionInfo */
+/** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransactionDetails} SolanaTransactionDetails */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaTransaction} SolanaTransaction */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').PaymasterTokenConfig} PaymasterTokenConfig */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfig} SolanaGaslessWalletPaymasterConfig */
