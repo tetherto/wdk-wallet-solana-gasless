@@ -16,7 +16,8 @@
 
 import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 
-import { AccountRole } from '@solana/kit'
+import { address } from '@solana/kit'
+import { findAssociatedTokenPda, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
 const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
@@ -50,19 +51,31 @@ function createMockRpc () {
   }
 }
 
-function createMockPaymaster () {
+function createMockPaymaster (accountAddress = TEST_ADDRESS) {
   return {
-    getPaymentInstruction: jest.fn().mockResolvedValue({
-      payment_amount: '5000',
-      payment_instruction: {
-        programAddress: '11111111111111111111111111111111',
-        accounts: [
-          {
-            address: TEST_ADDRESS,
-            role: AccountRole.READONLY_SIGNER
-          }
-        ],
-        data: new Uint8Array()
+    getPaymentInstruction: jest.fn().mockImplementation(async ({ fee_token: feeToken = TEST_PAYMASTER_TOKEN } = {}) => {
+      const [paymasterTokenAccount] = await findAssociatedTokenPda({
+        mint: address(feeToken),
+        owner: address(TEST_PAYMASTER_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
+      const [sourceTokenAccount] = await findAssociatedTokenPda({
+        mint: address(feeToken),
+        owner: address(accountAddress),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
+      const paymentInstruction = getTransferInstruction({
+        source: sourceTokenAccount,
+        destination: paymasterTokenAccount,
+        authority: address(accountAddress),
+        amount: 5000n
+      })
+
+      return {
+        payment_amount: '5000',
+        payment_instruction: paymentInstruction
       }
     }),
     getBlockhash: jest.fn().mockResolvedValue({

@@ -71,15 +71,15 @@ function createMockRpcWithRecipientAta () {
 
 function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
   return {
-    getPaymentInstruction: jest.fn().mockImplementation(async () => {
+    getPaymentInstruction: jest.fn().mockImplementation(async ({ fee_token: feeToken = TEST_PAYMASTER_TOKEN } = {}) => {
       const [paymasterTokenAccount] = await findAssociatedTokenPda({
-        mint: address(TEST_PAYMASTER_TOKEN),
+        mint: address(feeToken),
         owner: address(TEST_PAYMASTER_ADDRESS),
         tokenProgram: TOKEN_PROGRAM_ADDRESS
       })
 
       const [sourceTokenAccount] = await findAssociatedTokenPda({
-        mint: address(TEST_PAYMASTER_TOKEN),
+        mint: address(feeToken),
         owner: address(accountAddress),
         tokenProgram: TOKEN_PROGRAM_ADDRESS
       })
@@ -376,7 +376,7 @@ describe('WalletAccountSolanaGasless', () => {
             to: TEST_RECIPIENT_ADDRESS,
             value: 1000n
           })
-        ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
+        ).rejects.toThrow(/byteLength/)
     })
 
     test('should successfully send a transaction', async () => {
@@ -500,6 +500,84 @@ describe('WalletAccountSolanaGasless', () => {
       })
 
       expect(result).toHaveProperty('hash')
+    })
+
+    test('should reject a payment instruction that transfers more than payment_amount claims', async () => {
+      mockPaymaster.getPaymentInstruction.mockImplementation(async () => {
+        const [paymasterTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_PAYMASTER_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        const [sourceTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_ACCOUNT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        return {
+          payment_amount: '1',
+          payment_instruction: getTransferInstruction({
+            source: sourceTokenAccount,
+            destination: paymasterTokenAccount,
+            authority: address(TEST_ACCOUNT_ADDRESS),
+            amount: 1_000_000_000n
+          })
+        }
+      })
+
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5000n }
+      )
+
+      await expect(
+        limitedAccount.sendTransaction({
+          to: TEST_RECIPIENT_ADDRESS,
+          value: 1000000n
+        })
+      ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
+    test('should reject a payment instruction that pays an attacker-controlled token account', async () => {
+      mockPaymaster.getPaymentInstruction.mockImplementation(async () => {
+        const [attackerTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_RECIPIENT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        const [sourceTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_ACCOUNT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        return {
+          payment_amount: '1',
+          payment_instruction: getTransferInstruction({
+            source: sourceTokenAccount,
+            destination: attackerTokenAccount,
+            authority: address(TEST_ACCOUNT_ADDRESS),
+            amount: 1_000_000_000n
+          })
+        }
+      })
+
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5000n }
+      )
+
+      await expect(
+        limitedAccount.sendTransaction({
+          to: TEST_RECIPIENT_ADDRESS,
+          value: 1000000n
+        })
+      ).rejects.toThrow('Invalid payment instruction from paymaster.')
     })
 
     test('should throw if fee payer does not match paymaster', async () => {
@@ -655,6 +733,86 @@ describe('WalletAccountSolanaGasless', () => {
       expect(signedTx).toBeTruthy()
     })
 
+    test('should reject signing when the payment instruction amount exceeds transactionMaxFee', async () => {
+      mockPaymaster.getPaymentInstruction.mockImplementation(async () => {
+        const [paymasterTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_PAYMASTER_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        const [sourceTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_ACCOUNT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        return {
+          payment_amount: '1',
+          payment_instruction: getTransferInstruction({
+            source: sourceTokenAccount,
+            destination: paymasterTokenAccount,
+            authority: address(TEST_ACCOUNT_ADDRESS),
+            amount: 1_000_000_000n
+          })
+        }
+      })
+
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5000n }
+      )
+
+      await expect(
+        limitedAccount.signTransaction({
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        })
+      ).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      expect(mockPaymaster.signTransaction).not.toHaveBeenCalled()
+    })
+
+    test('should reject signing when the payment instruction destination is not the paymaster ATA', async () => {
+      mockPaymaster.getPaymentInstruction.mockImplementation(async () => {
+        const [attackerTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_RECIPIENT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        const [sourceTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_ACCOUNT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        return {
+          payment_amount: '1',
+          payment_instruction: getTransferInstruction({
+            source: sourceTokenAccount,
+            destination: attackerTokenAccount,
+            authority: address(TEST_ACCOUNT_ADDRESS),
+            amount: 1n
+          })
+        }
+      })
+
+      const limitedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, transactionMaxFee: 5000n }
+      )
+
+      await expect(
+        limitedAccount.signTransaction({
+          to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
+          value: 1000000n
+        })
+      ).rejects.toThrow('Invalid payment instruction from paymaster.')
+      expect(mockPaymaster.signTransaction).not.toHaveBeenCalled()
+    })
+
     test('should throw when signing a transaction after disposal', async () => {
       const account = new WalletAccountSolanaGasless(
         TEST_SEED_PHRASE,
@@ -669,7 +827,7 @@ describe('WalletAccountSolanaGasless', () => {
         to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
         value: 1000000n
         })
-      ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
+      ).rejects.toThrow(/byteLength/)
     })
 
     test('should request signing with the configured paymaster as signer', async () => {
@@ -719,7 +877,7 @@ describe('WalletAccountSolanaGasless', () => {
             recipient: TEST_RECIPIENT_ADDRESS,
             amount: 1000n
           })
-        ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
+        ).rejects.toThrow(/byteLength/)
     })
 
     test('should throw if amount exceeds u64 maximum', async () => {
@@ -771,6 +929,43 @@ describe('WalletAccountSolanaGasless', () => {
             transferMaxFee: 1000n
           })
         ).rejects.toThrow('Exceeded maximum fee cost')
+    })
+
+    test('should reject a transfer when the payment instruction pays an attacker-controlled token account', async () => {
+      mockPaymaster.getPaymentInstruction.mockImplementation(async () => {
+        const [attackerTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_RECIPIENT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        const [sourceTokenAccount] = await findAssociatedTokenPda({
+          mint: address(TEST_PAYMASTER_TOKEN),
+          owner: address(TEST_ACCOUNT_ADDRESS),
+          tokenProgram: TOKEN_PROGRAM_ADDRESS
+        })
+
+        return {
+          payment_amount: '1',
+          payment_instruction: getTransferInstruction({
+            source: sourceTokenAccount,
+            destination: attackerTokenAccount,
+            authority: address(TEST_ACCOUNT_ADDRESS),
+            amount: 1n
+          })
+        }
+      })
+
+      await expect(
+        account.transfer({
+          token: TEST_PAYMASTER_TOKEN,
+          recipient: TEST_RECIPIENT_ADDRESS,
+          amount: 1000n
+        }, {
+          transferMaxFee: 5000n
+        })
+      ).rejects.toThrow('Invalid payment instruction from paymaster.')
+      expect(mockPaymaster.signAndSendTransaction).not.toHaveBeenCalled()
     })
 
     test('should successfully transfer tokens', async () => {
