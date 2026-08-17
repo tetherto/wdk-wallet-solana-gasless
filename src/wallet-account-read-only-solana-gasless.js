@@ -476,7 +476,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
 
     return {
       ...payment,
-      payment_amount: paymentAmount.toString(),
+      payment_amount: Number(paymentAmount),
       payment_instruction: upgradedPaymentInstruction
     }
   }
