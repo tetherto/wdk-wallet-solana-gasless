@@ -161,8 +161,30 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @param {TransactionMessage} transactionMessage - The transaction message to fetch the payment info.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
+     * @throws {Error} If the paymaster payment instruction is not a recognized SPL transfer to the paymaster token account.
      */
     protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<GetPaymentInstructionResponse>;
+    /**
+     * @protected
+     * @param {string} [paymasterTokenAddress] - The paymaster fee token mint.
+     * @returns {Promise<string>} The paymaster's associated token account for that mint.
+     */
+    protected _getPaymasterAssociatedTokenAccount(paymasterTokenAddress?: string): Promise<string>;
+    /**
+     * @protected
+     * @param {object} instruction - A candidate SPL token instruction.
+     * @param {string} paymasterTokenAccount - The paymaster associated token account.
+     * @returns {boolean} True if the instruction is an SPL transfer whose destination is the paymaster token account.
+     */
+    protected _isPaymentInstruction(instruction: object, paymasterTokenAccount: string): boolean;
+    /**
+     * @protected
+     * @param {object} paymentInstruction - The paymaster payment instruction.
+     * @param {string} paymasterTokenAccount - The paymaster associated token account.
+     * @returns {bigint} The transfer amount encoded in the instruction.
+     * @throws {Error} If the instruction is not a recognized SPL transfer to the paymaster token account.
+     */
+    protected _getPaymentInstructionAmount(paymentInstruction: object, paymasterTokenAccount: string): bigint;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
