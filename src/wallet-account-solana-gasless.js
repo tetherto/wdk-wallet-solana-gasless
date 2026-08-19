@@ -20,8 +20,7 @@ import { createKeyPairSignerFromPrivateKeyBytes, partiallySignTransactionMessage
 import { assertIsFullySignedTransaction, getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { appendTransactionMessageInstruction, setTransactionMessageFeePayer } from '@solana/transaction-messages'
 import { address } from '@solana/addresses'
-import { AccountRole, decompileTransactionMessageFetchingLookupTables, getBase64Encoder, getCompiledTransactionMessageDecoder, getU64Decoder, pipe } from '@solana/kit'
-import { findAssociatedTokenPda, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
+import { AccountRole, decompileTransactionMessageFetchingLookupTables, getBase64Encoder, getCompiledTransactionMessageDecoder, pipe } from '@solana/kit'
 
 import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solana-gasless.js'
 
@@ -333,22 +332,14 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
     const { instructions } = await decompileTransactionMessageFetchingLookupTables(compiledTransactionMessage, this._rpc)
 
-    const [paymasterTokenAccount] = await findAssociatedTokenPda({
-      mint: address(this._config.paymasterToken.address),
-      owner: address(this._config.paymasterAddress),
-      tokenProgram: TOKEN_PROGRAM_ADDRESS
-    })
+    const paymasterTokenAccount = await this._getPaymasterAssociatedTokenAccount()
 
-    const paymentInstruction = instructions.find((instruction) => {
-      const discriminator = instruction.data?.[0]
-      const isTokenTransfer = instruction.programAddress === TOKEN_PROGRAM_ADDRESS && (discriminator === 3 || discriminator === 12)
+    const paymentInstruction = instructions.find((instruction) =>
+      this._isPaymentInstruction(instruction, paymasterTokenAccount))
 
-      return isTokenTransfer && instruction.accounts?.some((account) => account.address === paymasterTokenAccount)
-    })
-
-    const paymentAmount = paymentInstruction && getU64Decoder().decode(paymentInstruction.data, 1)
-
-    return BigInt(paymentAmount || 0n)
+    return paymentInstruction
+      ? this._getPaymentInstructionAmount(paymentInstruction, paymasterTokenAccount)
+      : 0n
   }
 
   /**

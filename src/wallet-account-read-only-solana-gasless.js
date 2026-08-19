@@ -25,7 +25,7 @@ import { appendTransactionMessageInstruction, appendTransactionMessageInstructio
 import { KoraClient } from '@solana/kora'
 import { compileTransaction, getBase64EncodedWireTransaction } from '@solana/transactions'
 import { findAssociatedTokenPda, getCreateAssociatedTokenIdempotentInstruction, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
-import { AccountRole, blockhash, createNoopSigner, pipe } from '@solana/kit'
+import { AccountRole, blockhash, createNoopSigner, getU64Decoder, pipe } from '@solana/kit'
 import { getTransferSolInstruction } from '@solana-program/system'
 
 import { ConfigurationError } from './errors.js'
@@ -479,6 +479,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @param {TransactionMessage} transactionMessage - The transaction message to fetch the payment info.
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
+   * @throws {Error} If the paymaster payment instruction is not a recognized SPL transfer to the paymaster token account.
    */
   async _getTransactionPaymentInfo (transactionMessage, config = {}) {
     const mergedConfig = { ...this._config, ...config }
@@ -503,6 +504,60 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
       })
     }
 
-    return { ...payment, payment_instruction: upgradedPaymentInstruction }
+    const paymasterTokenAccount = await this._getPaymasterAssociatedTokenAccount(mergedConfig.paymasterToken.address)
+    const paymentAmount = this._getPaymentInstructionAmount(upgradedPaymentInstruction, paymasterTokenAccount)
+
+    return {
+      ...payment,
+      payment_amount: Number(paymentAmount),
+      payment_instruction: upgradedPaymentInstruction
+    }
+  }
+
+  /**
+   * @protected
+   * @param {string} [paymasterTokenAddress] - The paymaster fee token mint.
+   * @returns {Promise<string>} The paymaster's associated token account for that mint.
+   */
+  async _getPaymasterAssociatedTokenAccount (paymasterTokenAddress = this._config.paymasterToken.address) {
+    const [paymasterTokenAccount] = await findAssociatedTokenPda({
+      mint: address(paymasterTokenAddress),
+      owner: address(this._config.paymasterAddress),
+      tokenProgram: TOKEN_PROGRAM_ADDRESS
+    })
+
+    return paymasterTokenAccount
+  }
+
+  /**
+   * @protected
+   * @param {object} instruction - A candidate SPL token instruction.
+   * @param {string} paymasterTokenAccount - The paymaster associated token account.
+   * @returns {boolean} True if the instruction is an SPL transfer whose destination is the paymaster token account.
+   */
+  _isPaymentInstruction (instruction, paymasterTokenAccount) {
+    const discriminator = instruction.data?.[0]
+    if (instruction.programAddress !== TOKEN_PROGRAM_ADDRESS || (discriminator !== 3 && discriminator !== 12)) {
+      return false
+    }
+
+    const destinationIndex = discriminator === 12 ? 2 : 1
+
+    return instruction.accounts?.[destinationIndex]?.address === paymasterTokenAccount
+  }
+
+  /**
+   * @protected
+   * @param {object} paymentInstruction - The paymaster payment instruction.
+   * @param {string} paymasterTokenAccount - The paymaster associated token account.
+   * @returns {bigint} The transfer amount encoded in the instruction.
+   * @throws {Error} If the instruction is not a recognized SPL transfer to the paymaster token account.
+   */
+  _getPaymentInstructionAmount (paymentInstruction, paymasterTokenAccount) {
+    if (!this._isPaymentInstruction(paymentInstruction, paymasterTokenAccount)) {
+      throw new Error('Invalid payment instruction from paymaster.')
+    }
+
+    return BigInt(getU64Decoder().decode(paymentInstruction.data, 1))
   }
 }
