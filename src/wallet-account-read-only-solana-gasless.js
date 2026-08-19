@@ -226,11 +226,16 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   }
 
   /**
-   * Blocks until a transaction reaches a terminal state (the requested finality target or `dropped`), or times out.
+   * Blocks until a transaction reaches the requested finality target, or times out.
+   *
+   * Note: Solana RPC does not expose a `dropped` state. An evicted or never-landed
+   * signature simply reports no status, which is indistinguishable from a not-yet-seen
+   * transaction and is treated as still-pending. A dropped transaction therefore surfaces
+   * as a {@link TimeoutError} rather than resolving to a `dropped` receipt.
    *
    * @param {string} hash - The transaction's signature.
    * @param {WaitForTransactionOptions} [options] - The wait options.
-   * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+   * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The terminal receipt for the finality target reached (inspect `success` to tell success from revert).
    * @throws {TimeoutError} If the target is not reached before the timeout.
    */
   async waitForTransaction (hash, options = {}) {

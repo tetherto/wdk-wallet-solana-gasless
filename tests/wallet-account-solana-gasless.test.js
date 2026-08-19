@@ -376,7 +376,7 @@ describe('WalletAccountSolanaGasless', () => {
             to: TEST_RECIPIENT_ADDRESS,
             value: 1000n
           })
-        ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
+        ).rejects.toThrow('Cannot read properties of undefined (reading \'byteLength\')')
     })
 
     test('should successfully send a transaction', async () => {
@@ -669,7 +669,7 @@ describe('WalletAccountSolanaGasless', () => {
         to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
         value: 1000000n
         })
-      ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
+      ).rejects.toThrow('Cannot read properties of undefined (reading \'byteLength\')')
     })
 
     test('should request signing with the configured paymaster as signer', async () => {
@@ -719,7 +719,7 @@ describe('WalletAccountSolanaGasless', () => {
             recipient: TEST_RECIPIENT_ADDRESS,
             amount: 1000n
           })
-        ).rejects.toThrow('Cannot read properties of null (reading \'byteLength\')')
+        ).rejects.toThrow('Cannot read properties of undefined (reading \'byteLength\')')
     })
 
     test('should throw if amount exceeds u64 maximum', async () => {
