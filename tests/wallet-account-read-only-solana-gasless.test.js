@@ -16,11 +16,11 @@
 
 import { describe, test, expect, beforeEach, jest } from '@jest/globals'
 
-import { address } from '@solana/kit'
+import { AccountRole, address } from '@solana/kit'
 import { findAssociatedTokenPda, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
+import { NoSuchElementError } from '@tetherto/wdk-wallet'
 
 const TEST_ADDRESS = 'HmWPZeFgxZAJQYgwh5ipYwjbVTHtjEHB3dnJ5xcQBHX9'
-const TEST_ACCOUNT_ADDRESS = '3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE'
 const TEST_PAYMASTER_ADDRESS = 'CyTi1U4TQt8MddAt54cez6rTJKZWvfjXNLvd3dVeveBz'
 const TEST_RECIPIENT_ADDRESS = '4r33xEKAD2cNMrC9NyJy8nb4XmruUKebZ6LZZm65PVUZ'
 const TEST_SEED_PHRASE =
@@ -47,6 +47,7 @@ function createMockRpc () {
     getTokenAccountBalance: jest.fn(),
     getLatestBlockhash: jest.fn(),
     getTransaction: jest.fn(),
+    getSignatureStatuses: jest.fn(),
     getMultipleAccounts: jest.fn()
   }
 }
@@ -446,6 +447,56 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
         await readOnlyAccount.getTransactionReceipt(MOCK_TX_SIGNATURE)
 
       expect(receipt).toBeNull()
+    })
+  })
+
+  describe('getTransaction', () => {
+    const MOCK_TX_SIGNATURE =
+      '2k3dxVsXko3Vtb7z2W31GHCbZBzRXCAo5YYqbn7bxUCQM1RQb5Xq1XhWndFGhZGpZ5mGARUx5kavWqFVoBGujpWf'
+
+    test('should throw NoSuchElementError when the transaction is not known', async () => {
+      mockRpc.getSignatureStatuses.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: [null] })
+      })
+
+      await expect(readOnlyAccount.getTransaction(MOCK_TX_SIGNATURE)).rejects.toThrow(NoSuchElementError)
+    })
+
+    test('should report confirmed with success and fee', async () => {
+      mockRpc.getSignatureStatuses.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [{ slot: 200n, confirmations: 10n, err: null, confirmationStatus: 'confirmed' }]
+        })
+      })
+      mockRpc.getTransaction.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ slot: 200n, meta: { err: null, fee: 5000n } })
+      })
+
+      const info = await readOnlyAccount.getTransaction(MOCK_TX_SIGNATURE)
+
+      expect(info).toMatchObject({
+        hash: MOCK_TX_SIGNATURE,
+        finality: 'confirmed',
+        success: true,
+        fee: 5000n,
+        confirmations: 10
+      })
+    })
+
+    test('should report final for a reverted finalized transaction', async () => {
+      mockRpc.getSignatureStatuses.mockReturnValue({
+        send: jest.fn().mockResolvedValue({
+          value: [{ slot: 400n, confirmations: null, err: { InstructionError: [0, 'Custom'] }, confirmationStatus: 'finalized' }]
+        })
+      })
+      mockRpc.getTransaction.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ slot: 400n, meta: { err: { InstructionError: [0, 'Custom'] }, fee: 5000n } })
+      })
+
+      const info = await readOnlyAccount.getTransaction(MOCK_TX_SIGNATURE)
+
+      expect(info.finality).toBe('final')
+      expect(info.success).toBe(false)
     })
   })
 

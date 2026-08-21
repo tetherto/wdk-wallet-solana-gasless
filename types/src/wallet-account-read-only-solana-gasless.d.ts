@@ -83,10 +83,34 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     /**
      * Retrieves a transaction receipt by its signature
      *
+     * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The raw transaction remains available on its `transaction` property.
      * @param {string} hash - The transaction's hash.
      * @returns {Promise<SolanaTransactionReceipt | null>} — The receipt, or null if the transaction has not been included in a block yet.
      */
     getTransactionReceipt(hash: string): Promise<SolanaTransactionReceipt | null>;
+    /**
+     * Returns a normalized, finality-based receipt for a transaction.
+     *
+     * @param {string} hash - The transaction's signature.
+     * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The normalized receipt.
+     * @throws {ValueError} If the hash is not a valid signature.
+     * @throws {NoSuchElementError} If no transaction has been found for the given hash.
+     */
+    getTransaction(hash: string): Promise<TransactionReceipt & SolanaTransactionDetails>;
+    /**
+     * Blocks until a transaction reaches the requested finality target, or times out.
+     *
+     * Note: Solana RPC does not expose a `dropped` state. An evicted or never-landed
+     * signature simply reports no status, which is indistinguishable from a not-yet-seen
+     * transaction and is treated as still-pending. A dropped transaction therefore surfaces
+     * as a {@link TimeoutError} rather than resolving to a `dropped` receipt.
+     *
+     * @param {string} hash - The transaction's signature.
+     * @param {WaitForTransactionOptions} [options] - The wait options.
+     * @returns {Promise<TransactionReceipt & SolanaTransactionDetails>} The terminal receipt for the finality target reached (inspect `success` to tell success from revert).
+     * @throws {TimeoutError} If the target is not reached before the timeout.
+     */
+    waitForTransaction(hash: string, options?: WaitForTransactionOptions): Promise<TransactionReceipt & SolanaTransactionDetails>;
     /**
      * Verifies a message's signature.
      *
@@ -187,6 +211,8 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     protected _getPaymentInstructionAmount(paymentInstruction: object, paymasterTokenAccount: string): bigint;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
+export type TransactionReceipt = import("@tetherto/wdk-wallet").TransactionReceipt;
+export type WaitForTransactionOptions = import("@tetherto/wdk-wallet").WaitForTransactionOptions;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type SolanaRpc = ReturnType<typeof import("@solana/rpc").createSolanaRpc>;
 export type SolanaTransactionReceipt = ReturnType<import("@solana/rpc-api").SolanaRpcApi["getTransaction"]>;
@@ -198,6 +224,7 @@ export type SolanaWalletConfig = import("@tetherto/wdk-wallet-solana").SolanaWal
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
 import { ConfigurationError } from './errors.js';
+export type SolanaTransactionDetails = import("@tetherto/wdk-wallet-solana").SolanaTransactionDetails;
 export type PaymasterTokenConfig = {
     /**
      * - The address of the paymaster token.
