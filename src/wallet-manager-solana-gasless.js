@@ -16,7 +16,13 @@
 
 import WalletManager from '@tetherto/wdk-wallet'
 
+import { WalletAccountReadOnlySolana } from '@tetherto/wdk-wallet-solana'
+
 import WalletAccountSolanaGasless from './wallet-account-solana-gasless.js'
+import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solana-gasless.js'
+
+/** @typedef {ReturnType<typeof import('@solana/rpc').createSolanaRpc>} SolanaRpc */
+/** @typedef {import('@solana/kora').KoraClient} KoraClient */
 
 /** @typedef {import('./wallet-account-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
 
@@ -37,6 +43,23 @@ export default class WalletManagerSolanaGasless extends WalletManager {
      * @type {SolanaGaslessWalletConfig}
      */
     this._config = config
+
+    /**
+     * The solana rpc client. Shared with every account this manager creates, so two accounts
+     * never open two clients for the same endpoint.
+     *
+     * @protected
+     * @type {SolanaRpc | undefined}
+     */
+    this._rpc = WalletAccountReadOnlySolana._buildRpc(config)
+
+    /**
+     * The paymaster client. Shared with every account this manager creates.
+     *
+     * @protected
+     * @type {KoraClient}
+     */
+    this._paymaster = WalletAccountReadOnlySolanaGasless._buildPaymaster(config)
   }
 
   /**
@@ -63,11 +86,22 @@ export default class WalletManagerSolanaGasless extends WalletManager {
    */
   async getAccountByPath (path) {
     if (!this._accounts[path]) {
-      const account = new WalletAccountSolanaGasless(this.seed, path, this._config)
+      const account = new WalletAccountSolanaGasless(this.seed, path, this._accountConfig())
 
       this._accounts[path] = account
     }
 
     return this._accounts[path]
+  }
+
+  /**
+   * Builds the account config, injecting the manager's shared clients so accounts reuse them
+   * instead of opening their own.
+   *
+   * @private
+   * @returns {SolanaGaslessWalletConfig} The account configuration.
+   */
+  _accountConfig () {
+    return { ...this._config, provider: this._rpc, paymasterUrl: this._paymaster }
   }
 }

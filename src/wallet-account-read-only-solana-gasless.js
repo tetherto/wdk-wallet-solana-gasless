@@ -52,7 +52,7 @@ import { getTransferSolInstruction } from '@solana-program/system'
 
 /**
  * @typedef {Object} SolanaGaslessWalletPaymasterConfig
- * @property {string | KoraClientOptions | (string | KoraClientOptions)[]} paymasterUrl - The paymaster RPC url, client options, or failover list.
+ * @property {string | KoraClientOptions | KoraClient | (string | KoraClientOptions | KoraClient)[]} paymasterUrl - The paymaster RPC url, client options, an already-built kora client, or failover list. An already-built client (or failover wrapper) is reused as-is, so a manager can share a single instance across every account it creates.
  * @property {string} paymasterAddress - The address of the paymaster program.
  * @property {PaymasterTokenConfig} paymasterToken - The paymaster token configuration.
  */
@@ -111,7 +111,55 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @protected
      * @type {KoraClient}
      */
-    this._paymaster = this._createFailoverProvider()
+    this._paymaster = WalletAccountReadOnlySolanaGasless._buildPaymaster(config)
+  }
+
+  /**
+   * Builds the paymaster client from the wallet configuration: an already-built {@link KoraClient}
+   * (or failover wrapper) reused as-is, a paymaster url or client options, or a failover list of any
+   * of these. Passing an already-built client is what lets a manager share a single instance across
+   * every account it creates.
+   *
+   * @protected
+   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
+   * @returns {KoraClient} The paymaster client.
+   * @throws {ValueError} If the `paymasterUrl` option is set to an empty list.
+   */
+  static _buildPaymaster (config = {}) {
+    const { paymasterUrl, retries = 3 } = config
+
+    const toKoraClient = (entry) => WalletAccountReadOnlySolanaGasless._isKoraClient(entry)
+      ? entry
+      : new KoraClient(typeof entry === 'string' ? { rpcUrl: entry } : entry)
+
+    if (Array.isArray(paymasterUrl)) {
+      if (!paymasterUrl.length) {
+        throw new ValueError("The 'paymasterUrl' option cannot be set to an empty list.")
+      }
+
+      const failoverProvider = new FailoverProvider({ retries })
+
+      for (const entry of paymasterUrl) {
+        failoverProvider.addProvider(toKoraClient(entry))
+      }
+
+      return failoverProvider.initialize()
+    }
+
+    return toKoraClient(paymasterUrl)
+  }
+
+  /**
+   * Checks whether a value is an already-built {@link KoraClient} (or a failover wrapper around one),
+   * as opposed to a url string or client options. Detection is by shape so a failover `Proxy` is
+   * recognized too.
+   *
+   * @protected
+   * @param {unknown} value - The value to check.
+   * @returns {boolean} `true` if the value is an already-built kora client.
+   */
+  static _isKoraClient (value) {
+    return typeof value?.getPaymentInstruction === 'function'
   }
 
   /**
@@ -301,12 +349,12 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {void}
    */
   static _validateConfig (config) {
-    let { paymasterUrl, paymasterAddress, paymasterToken } = config
+    const { paymasterUrl, paymasterAddress, paymasterToken } = config
     const missingFields = []
 
-    if (!Array.isArray(paymasterUrl)) {
-      paymasterUrl = typeof paymasterUrl === 'string' ? paymasterUrl : paymasterUrl?.rpcUrl
-      if (!paymasterUrl) {
+    if (!Array.isArray(paymasterUrl) && !WalletAccountReadOnlySolanaGasless._isKoraClient(paymasterUrl)) {
+      const rpcUrl = typeof paymasterUrl === 'string' ? paymasterUrl : paymasterUrl?.rpcUrl
+      if (!rpcUrl) {
         missingFields.push('paymasterUrl')
       }
     }
@@ -322,41 +370,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     if (missingFields.length > 0) {
       throw new ValueError(`Missing required paymaster token configuration fields: ${missingFields.join(', ')}.`)
     }
-  }
-
-  /**
-   * Creates a FailoverProvider from the configured providers. If only one provider is supplied, it is wrapped and returned.
-   *
-   * @protected
-   * @param {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>} [config] - The configuration object.
-   * @returns {KoraClient} A wrapped KoraClient instance.
-   * @throws {ValueError} If the `paymasterUrl` option is set to an empty array.
-   */
-  _createFailoverProvider (config = this._config) {
-    const { paymasterUrl, retries = 3 } = config
-
-    if (Array.isArray(paymasterUrl)) {
-      if (!paymasterUrl.length) {
-        throw new ValueError("The 'paymasterUrl' option cannot be set to an empty list.")
-      }
-
-      const failoverProvider = new FailoverProvider({ retries })
-
-      for (const entry of paymasterUrl) {
-        const opts = typeof entry === 'string'
-          ? { rpcUrl: entry }
-          : entry
-        const option = new KoraClient(opts)
-        failoverProvider.addProvider(option)
-      }
-
-      return failoverProvider.initialize()
-    }
-
-    const opts = typeof paymasterUrl === 'string'
-      ? { rpcUrl: paymasterUrl }
-      : paymasterUrl
-    return new KoraClient(opts)
   }
 
   /**
