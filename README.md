@@ -6,7 +6,7 @@
 
 **Note**: This package is currently in beta. Please test thoroughly in development environments before using in production.
 
-A simple and secure package to manage gasless Solana wallet operations. This package provides a clean API for creating, managing, and interacting with Solana accounts using BIP-39 seed phrases and Solana-specific derivation paths, with paymaster support for sponsored transaction fees.
+A [Solana wallet module](https://docs.wdk.tether.io/sdk/wallet-modules/wallet-solana-gasless/) for gasless operations in WDK (Wallet Development Kit) by Tether. This package provides a clean API for creating, managing, and interacting with Solana accounts using BIP-39 seed phrases and Solana-specific derivation paths, with paymaster support for sponsored transaction fees.
 
 ## About WDK
 
