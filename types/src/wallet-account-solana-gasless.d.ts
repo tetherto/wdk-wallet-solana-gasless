@@ -18,6 +18,14 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     private _ownerAccount;
     /** @private */
     private _signer;
+    /** @private */
+    private _disposed;
+    /**
+     * True if the account has been disposed.
+     *
+     * @type {boolean}
+     */
+    get disposed(): boolean;
     /**
      * The derivation path's index of this account.
      *
@@ -51,6 +59,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      *
      * @param {string} message - The message to sign.
      * @returns {Promise<string>} The message's signature.
+     * @throws {DisposalError} If the account has been disposed.
      */
     sign(message: string): Promise<string>;
     /**
@@ -60,6 +69,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<FullySignedTransaction>} The signed transaction.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
+     * @throws {DisposalError} If the account has been disposed.
      */
     signTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<FullySignedTransaction>;
     /**
@@ -70,6 +80,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting. The `paymasterToken` option must name the same token the transaction was signed with.
+     * @throws {DisposalError} If the account has been disposed.
      */
     sendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
     /**
@@ -88,6 +99,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransferResult>} The transfer's result.
      * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
+     * @throws {DisposalError} If the account has been disposed.
      */
     transfer({ token, recipient, amount }: TransferOptions, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransferResult>;
     /**
