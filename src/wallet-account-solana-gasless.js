@@ -14,7 +14,7 @@
 
 'use strict'
 
-import { MaximumFeeExceededError, NoSuchElementError, ProviderRequiredError } from '@tetherto/wdk-wallet'
+import { DisposalError, MaximumFeeExceededError, NoSuchElementError, ProviderRequiredError } from '@tetherto/wdk-wallet'
 
 import { WalletAccountSolana } from '@tetherto/wdk-wallet-solana'
 
@@ -63,6 +63,18 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
     /** @private */
     this._signer = undefined
+
+    /** @private */
+    this._disposed = false
+  }
+
+  /**
+   * True if the account has been disposed.
+   *
+   * @type {boolean}
+   */
+  get disposed () {
+    return this._disposed
   }
 
   /**
@@ -110,8 +122,13 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    *
    * @param {string} message - The message to sign.
    * @returns {Promise<string>} The message's signature.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async sign (message) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     return await this._ownerAccount.sign(message)
   }
 
@@ -122,8 +139,13 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<FullySignedTransaction>} The signed transaction.
    * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async signTransaction (tx, config = {}) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     const mergedConfig = this._mergeConfig(config)
 
     const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config)
@@ -156,8 +178,13 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
    * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting. The `paymasterToken` option must name the same token the transaction was signed with.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async sendTransaction (tx, config = {}) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     if (this._isSignedTransaction(tx)) {
       const mergedConfig = this._mergeConfig(config)
 
@@ -218,8 +245,13 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<TransferResult>} The transfer's result.
    * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
+   * @throws {DisposalError} If the account has been disposed.
    */
   async transfer ({ token, recipient, amount }, config = {}) {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
+
     const mergedConfig = this._mergeConfig(config)
 
     const tx = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
@@ -259,8 +291,12 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * Disposes the wallet account, erasing the private key from the memory.
    */
   dispose () {
+    if (this._disposed) return
+
     this._signer = undefined
     this._ownerAccount.dispose()
+
+    this._disposed = true
   }
 
   /** @private */

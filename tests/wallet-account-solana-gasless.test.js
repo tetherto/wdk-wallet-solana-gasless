@@ -16,7 +16,7 @@
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals'
 
-import { NoSuchElementError } from '@tetherto/wdk-wallet'
+import { DisposalError, NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import { getBase64EncodedWireTransaction, getTransactionDecoder, isFullySignedTransaction } from '@solana/transactions'
 import { address, getBase64Encoder } from '@solana/kit'
@@ -322,6 +322,20 @@ describe('WalletAccountSolanaGasless', () => {
           '5a84997ab4e543bd48a39f6aab2db7c0816f958167a56d4a9da0fd7b58517324'
         )
       })
+
+      test('should expose the disposed state', async () => {
+        const tempWallet = new WalletManagerSolanaGasless(
+          TEST_SEED_PHRASE,
+          TEST_CONFIG
+        )
+        const tempAccount = await tempWallet.getAccount(97)
+
+        expect(tempAccount.disposed).toBe(false)
+
+        tempAccount.dispose()
+
+        expect(tempAccount.disposed).toBe(true)
+      })
     })
 
   describe('sign', () => {
@@ -360,7 +374,7 @@ describe('WalletAccountSolanaGasless', () => {
 
         await expect(
           tempAccount.sign('test message')
-        ).rejects.toThrow('The wallet account has been disposed.')
+        ).rejects.toThrow(DisposalError)
       })
   })
 
@@ -378,7 +392,7 @@ describe('WalletAccountSolanaGasless', () => {
             to: TEST_RECIPIENT_ADDRESS,
             value: 1000n
           })
-        ).rejects.toThrow(/byteLength/)
+        ).rejects.toThrow(DisposalError)
     })
 
     test('should successfully send a transaction', async () => {
