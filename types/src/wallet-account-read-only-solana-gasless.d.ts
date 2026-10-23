@@ -38,6 +38,12 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      */
     protected _paymaster: KoraClient;
     /**
+     * The read-only wallet account configuration.
+     *
+     * @type {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
+     */
+    get config(): Omit<SolanaGaslessWalletConfig, "transferMaxFee" | "transactionMaxFee">;
+    /**
      * Returns the account's native SOL balance.
      *
      * @returns {Promise<bigint>} The sol balance (in lamports).

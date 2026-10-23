@@ -148,6 +148,20 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
     })
   })
 
+  describe('config', () => {
+    test('should return the account configuration', () => {
+      expect(readOnlyAccount.config).toEqual({
+        provider: TEST_RPC_URL,
+        commitment: 'confirmed',
+        paymasterUrl: TEST_PAYMASTER_URL,
+        paymasterAddress: TEST_PAYMASTER_ADDRESS,
+        paymasterToken: {
+          address: TEST_PAYMASTER_TOKEN
+        }
+      })
+    })
+  })
+
   describe('getBalance', () => {
     test('should return SOL balance in lamports', async () => {
       mockRpc.getBalance.mockReturnValue({

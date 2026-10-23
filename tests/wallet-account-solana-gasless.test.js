@@ -242,6 +242,28 @@ describe('WalletAccountSolanaGasless', () => {
       })
     })
 
+  describe('config', () => {
+    test('should return the account configuration, including the fee limits', () => {
+      const account = new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0'", {
+        ...TEST_CONFIG,
+        transferMaxFee: 1_000n,
+        transactionMaxFee: 2_000n
+      })
+
+      expect(account.config).toEqual({
+        provider: TEST_RPC_URL,
+        commitment: 'processed',
+        paymasterUrl: TEST_PAYMASTER_URL,
+        paymasterAddress: TEST_PAYMASTER_ADDRESS,
+        paymasterToken: {
+          address: TEST_PAYMASTER_TOKEN
+        },
+        transferMaxFee: 1_000n,
+        transactionMaxFee: 2_000n
+      })
+    })
+  })
+
   describe('path', () => {
       test('should follow SLIP-0010 Solana derivation path format', () => {
         expect(account.path).toBe("m/44'/501'/0'/0'")

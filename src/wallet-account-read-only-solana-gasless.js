@@ -115,6 +115,15 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   }
 
   /**
+   * The read-only wallet account configuration.
+   *
+   * @type {Omit<SolanaGaslessWalletConfig, 'transferMaxFee' | 'transactionMaxFee'>}
+   */
+  get config () {
+    return this._config
+  }
+
+  /**
    * Builds the paymaster client from the wallet configuration: an already-built {@link KoraClient}
    * (or failover wrapper) reused as-is, a paymaster url or client options, or a failover list of any
    * of these. Passing an already-built client is what lets a manager share a single instance across

@@ -66,6 +66,15 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /**
+   * The solana gasless wallet account configuration.
+   *
+   * @type {SolanaGaslessWalletConfig}
+   */
+  get config () {
+    return this._config
+  }
+
+  /**
    * The derivation path's index of this account.
    *
    * @type {number}
