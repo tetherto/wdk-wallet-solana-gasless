@@ -125,9 +125,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the account has been disposed.
    */
   async sign (message) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     return await this._ownerAccount.sign(message)
   }
@@ -142,9 +140,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the account has been disposed.
    */
   async signTransaction (tx, config = {}) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     const mergedConfig = this._mergeConfig(config)
 
@@ -181,9 +177,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the account has been disposed.
    */
   async sendTransaction (tx, config = {}) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     if (this._isSignedTransaction(tx)) {
       const mergedConfig = this._mergeConfig(config)
@@ -248,9 +242,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the account has been disposed.
    */
   async transfer ({ token, recipient, amount }, config = {}) {
-    if (this.disposed) {
-      throw new DisposalError('The account has been disposed.')
-    }
+    this._guardDisposed()
 
     const mergedConfig = this._mergeConfig(config)
 
@@ -412,5 +404,12 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     }
 
     return this._signer
+  }
+
+  /** @private */
+  _guardDisposed () {
+    if (this.disposed) {
+      throw new DisposalError('The account has been disposed.')
+    }
   }
 }

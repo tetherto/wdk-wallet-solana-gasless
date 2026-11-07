@@ -148,6 +148,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     protected _isSignedTransaction(tx: SolanaTransaction | FullySignedTransaction): tx is FullySignedTransaction;
     /** @private */
     private _getSigner;
+    /** @private */
+    private _guardDisposed;
 }
 export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
