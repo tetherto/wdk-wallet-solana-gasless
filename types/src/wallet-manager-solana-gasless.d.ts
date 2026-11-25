@@ -78,9 +78,10 @@ export default class WalletManagerSolanaGasless extends WalletManager<ISignerSol
         signerName?: string;
     }): Promise<WalletAccountSolanaGasless>;
     /**
-     * Returns the wallet account backed by a registered signer, without further derivation.
-     * Use it for non-derivable signers, such as {@link PrivateKeySignerSolana}. The signer is left
-     * untouched when the account is disposed.
+     * Returns the wallet account associated with a registered signer. For non-derivable signers (e.g., private-key
+     * signers such as {@link PrivateKeySignerSolana}), returns the signer's single account. For derivable signers,
+     * returns the wallet account at the signer's root, with no further derivation. The signer is left untouched
+     * when the account is disposed.
      *
      * @example
      * wallet.addSigner('treasury', new PrivateKeySignerSolana(privateKey))
