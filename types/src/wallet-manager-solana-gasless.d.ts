@@ -10,6 +10,7 @@ export default class WalletManagerSolanaGasless extends WalletManager<ISignerSol
      * @param {ISignerSolana} signer - The default root signer.
      * @param {SolanaGaslessWalletConfig} [config] - The configuration object.
      * @throws {InvalidSignerError} If the given signer doesn't support account derivation.
+     * @throws {ValueError} If the `paymasterUrl` option is an empty list.
      */
     constructor(signer: ISignerSolana, config?: SolanaGaslessWalletConfig);
     /**
@@ -23,6 +24,7 @@ export default class WalletManagerSolanaGasless extends WalletManager<ISignerSol
      * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
      * @param {SolanaGaslessWalletConfig} [config] - The configuration object.
      * @throws {ValueError} If the seed is not a valid seed or BIP-39 seed phrase.
+     * @throws {ValueError} If the `paymasterUrl` option is an empty list.
      */
     constructor(seed: string | Uint8Array, config?: SolanaGaslessWalletConfig);
     /**
