@@ -62,6 +62,8 @@ export default class WalletManagerSolanaGasless extends WalletManager {
    */
   constructor (seedOrSigner, config = {}) {
     const isSeed = typeof seedOrSigner === 'string' || seedOrSigner instanceof Uint8Array
+    const rpc = WalletAccountReadOnlySolana._buildRpc(config)
+    const paymaster = WalletAccountReadOnlySolanaGasless._buildPaymaster(config)
 
     super(isSeed ? new SeedSignerSolana(seedOrSigner) : seedOrSigner, config)
 
@@ -88,7 +90,7 @@ export default class WalletManagerSolanaGasless extends WalletManager {
      * @protected
      * @type {SolanaRpc | undefined}
      */
-    this._rpc = WalletAccountReadOnlySolana._buildRpc(config)
+    this._rpc = rpc
 
     /**
      * The paymaster client. Shared with every account this manager creates.
@@ -96,7 +98,7 @@ export default class WalletManagerSolanaGasless extends WalletManager {
      * @protected
      * @type {KoraClient}
      */
-    this._paymaster = WalletAccountReadOnlySolanaGasless._buildPaymaster(config)
+    this._paymaster = paymaster
   }
 
   /**

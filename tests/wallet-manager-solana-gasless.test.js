@@ -248,6 +248,11 @@ describe('WalletManagerSolanaGasless', () => {
       signer.dispose()
     })
 
+    test('should throw if the paymaster url list is empty', () => {
+      expect(() => new WalletManagerSolanaGasless(TEST_SEED_PHRASE, { ...TEST_CONFIG, paymasterUrl: [] }))
+        .toThrow("The 'paymasterUrl' option cannot be set to an empty list.")
+    })
+
     test('should throw if the seed phrase is invalid', () => {
       expect(() => new WalletManagerSolanaGasless('invalid seed phrase', TEST_CONFIG))
         .toThrow(ValueError)
