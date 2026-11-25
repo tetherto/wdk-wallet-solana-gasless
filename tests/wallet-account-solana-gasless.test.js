@@ -1141,6 +1141,8 @@ describe('WalletAccountSolanaGasless', () => {
       value: 1000000n
     }
 
+    const SIGNED_TRANSACTION = 'AgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQHEla2PXBlRIfeyi6qvAfiCTY4MsQrviaIi3PeEgI4ktxE9j69CWEx+uOG+yvGNvlOV1Ci5kmYWPg00AOGEQMwMgAIAAgex50d8Np37a9HpYySMW+7FKAu5KmMS88QibIo8envDySsscVws8k21fpWkTfNMtCTeJGDobE9uvnumK1dIMN4ZFCx0QgXqlc/5UgVYYckMhNAc0ttjwDEOQ/ViFuN1iWA5Itbh5YQ8EumAfmOUeVRzI/h293Wv08BTXjpZJHA6/mrPZb1pAlhAT+18zcwUjuhXgxGr8KMLIlP4YyHOyuWbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqfgxWP2iPQaG+B6WewJxZKfNcOCZaDhmZ3ULalZfD+YiAgUCAQMMAgAAAEBCDwAAAAAABgMEAgEJA4gTAAAAAAAAAA=='
+
     test('should use the given signer as the account owner', async () => {
       const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
 
@@ -1161,14 +1163,12 @@ describe('WalletAccountSolanaGasless', () => {
       seedAccount.dispose()
     })
 
-    test('should sign the same transaction as the seed account for the same key', async () => {
+    test('should sign a transaction through a private key signer', async () => {
       const signerAccount = WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, TEST_CONFIG)
 
-      const expected = await account.signTransaction(TRANSACTION)
+      const signedTransaction = await signerAccount.signTransaction(TRANSACTION)
 
-      const actual = await signerAccount.signTransaction(TRANSACTION)
-
-      expect(getBase64EncodedWireTransaction(actual)).toBe(getBase64EncodedWireTransaction(expected))
+      expect(getBase64EncodedWireTransaction(signedTransaction)).toBe(SIGNED_TRANSACTION)
 
       signerAccount.dispose()
     })
@@ -1256,12 +1256,10 @@ describe('WalletAccountSolanaGasless', () => {
         await wallet.getAccountByPath("0'/0'", { signerName: 'deferred' })
       ]
 
-      const expected = getBase64EncodedWireTransaction(await account.signTransaction(TRANSACTION))
-
       for (const deferredAccount of accounts) {
         expect(await deferredAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
         expect(await deferredAccount.getBalance()).toBe(123n)
-        expect(getBase64EncodedWireTransaction(await deferredAccount.signTransaction(TRANSACTION))).toBe(expected)
+        expect(getBase64EncodedWireTransaction(await deferredAccount.signTransaction(TRANSACTION))).toBe(SIGNED_TRANSACTION)
       }
 
       expect(mockRpc.getBalance).toHaveBeenCalledWith(TEST_ACCOUNT_ADDRESS, { commitment: 'processed' })

@@ -178,7 +178,7 @@ describe('WalletManagerSolanaGasless', () => {
       const account = await wallet.getAccountByPath("2'/3'", { signerName: 'savings' })
 
       expect(account.path).toBe("m/44'/501'/1'/2'/3'")
-      expect(await account.getAddress()).toBe(await (await wallet.getAccountByPath("1'/2'/3'")).getAddress())
+      expect(await account.getAddress()).toBe('8amX85XP5NgSMZZySgHWCkg5jvakRz8bX2UL8tPZBpXD')
       expect(account).not.toBe(await wallet.getAccountByPath("2'/3'"))
 
       signer.dispose()
@@ -229,7 +229,7 @@ describe('WalletManagerSolanaGasless', () => {
       const account = await signerWallet.getAccount(0)
 
       expect(account.path).toBe("m/44'/501'/0'/0'")
-      expect(await account.getAddress()).toBe(await (await wallet.getAccount(0)).getAddress())
+      expect(await account.getAddress()).toBe('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
       expect(signerWallet.seed).toBeUndefined()
 
       signerWallet.dispose()
