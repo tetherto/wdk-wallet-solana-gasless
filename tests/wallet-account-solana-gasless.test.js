@@ -1201,7 +1201,7 @@ describe('WalletAccountSolanaGasless', () => {
 
       signerAccount.dispose()
 
-      await expect(signerAccount.sign('test message')).rejects.toThrow(DisposalError)
+      await expect(signerAccount.sign('test message')).rejects.toThrow(new DisposalError('The wallet account has been disposed.'))
     })
 
     test('should create an account from a private key that owns its signer', async () => {

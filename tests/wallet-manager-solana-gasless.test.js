@@ -96,7 +96,7 @@ describe('WalletManagerSolanaGasless', () => {
 
     test('should throw if the index is not an integer', async () => {
       await expect(wallet.getAccount(1.5))
-        .rejects.toThrow(ValueError)
+        .rejects.toThrow(new ValueError('The index must be an integer between 0 and 2^31 - 1.'))
     })
 
     test('should throw if the index is 2^31 or higher', async () => {
@@ -134,7 +134,7 @@ describe('WalletManagerSolanaGasless', () => {
 
     test('should throw if no signer exists with the given name', async () => {
       await expect(wallet.getAccount('unknown'))
-        .rejects.toThrow(NoSuchElementError)
+        .rejects.toThrow(new NoSuchElementError('No signer found with name "unknown".'))
     })
 
     test('should throw if the registered signer has been disposed', async () => {
@@ -190,7 +190,7 @@ describe('WalletManagerSolanaGasless', () => {
       wallet.addSigner('treasury', signer)
 
       await expect(wallet.getAccountByPath("0'/0'", { signerName: 'treasury' }))
-        .rejects.toThrow(InvalidSignerError)
+        .rejects.toThrow(new InvalidSignerError('The signer does not support account derivation.'))
 
       signer.dispose()
     })
@@ -243,7 +243,7 @@ describe('WalletManagerSolanaGasless', () => {
       const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
 
       expect(() => new WalletManagerSolanaGasless(signer, TEST_CONFIG))
-        .toThrow(InvalidSignerError)
+        .toThrow(new InvalidSignerError('The default signer must be derivable. Non-derivable signers (e.g. private-key signers) can only be registered by name via addSigner.'))
 
       signer.dispose()
     })
@@ -255,7 +255,7 @@ describe('WalletManagerSolanaGasless', () => {
 
     test('should throw if the seed phrase is invalid', () => {
       expect(() => new WalletManagerSolanaGasless('invalid seed phrase', TEST_CONFIG))
-        .toThrow(ValueError)
+        .toThrow(new ValueError('The seed phrase is invalid.'))
     })
   })
 
