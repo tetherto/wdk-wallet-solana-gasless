@@ -1180,6 +1180,10 @@ describe('WalletAccountSolanaGasless', () => {
 
     const SIGNED_TRANSACTION = 'AgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQHEla2PXBlRIfeyi6qvAfiCTY4MsQrviaIi3PeEgI4ktxE9j69CWEx+uOG+yvGNvlOV1Ci5kmYWPg00AOGEQMwMgAIAAgex50d8Np37a9HpYySMW+7FKAu5KmMS88QibIo8envDySsscVws8k21fpWkTfNMtCTeJGDobE9uvnumK1dIMN4ZFCx0QgXqlc/5UgVYYckMhNAc0ttjwDEOQ/ViFuN1iWA5Itbh5YQ8EumAfmOUeVRzI/h293Wv08BTXjpZJHA6/mrPZb1pAlhAT+18zcwUjuhXgxGr8KMLIlP4YyHOyuWbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqfgxWP2iPQaG+B6WewJxZKfNcOCZaDhmZ3ULalZfD+YiAgUCAQMMAgAAAEBCDwAAAAAABgMEAgEJA4gTAAAAAAAAAA=='
 
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
     test('should use the given signer as the account owner', async () => {
       const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
 
@@ -1261,8 +1265,6 @@ describe('WalletAccountSolanaGasless', () => {
         .toThrow('Missing required paymaster token configuration fields: paymasterAddress.')
 
       expect(dispose).toHaveBeenCalledTimes(1)
-
-      dispose.mockRestore()
     })
 
     test('should dispose the seed signer if the account cannot be created', () => {
@@ -1274,8 +1276,6 @@ describe('WalletAccountSolanaGasless', () => {
         .toThrow('Missing required paymaster token configuration fields: paymasterAddress.')
 
       expect(dispose).toHaveBeenCalledTimes(1)
-
-      dispose.mockRestore()
     })
 
     test('should throw if the derivation path is not a valid BIP-32 path', () => {
