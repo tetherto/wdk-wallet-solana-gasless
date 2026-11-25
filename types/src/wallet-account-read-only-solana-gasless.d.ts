@@ -232,6 +232,8 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @throws {ValueError} If the instruction is not a recognized SPL transfer to the paymaster token account.
      */
     protected _getPaymentInstructionAmount(paymentInstruction: object, paymasterTokenAccount: string): bigint;
+    /** @private */
+    private _getSolanaReadOnlyAccount;
 }
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
 export type TransactionReceipt = import("@tetherto/wdk-wallet").TransactionReceipt;

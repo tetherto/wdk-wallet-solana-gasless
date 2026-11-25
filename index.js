@@ -29,6 +29,7 @@
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfig} SolanaGaslessWalletPaymasterConfig */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfigOverrides} SolanaGaslessWalletPaymasterConfigOverrides */
 /** @typedef {import('./src/wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
+/** @typedef {import('./src/wallet-account-solana-gasless.js').SignerOptions} SignerOptions */
 
 export { default } from './src/wallet-manager-solana-gasless.js'
 
@@ -38,9 +39,12 @@ export { default as WalletAccountSolanaGasless } from './src/wallet-account-sola
 
 export {
   AssertionError,
+  DisposalError,
+  InvalidSignerError,
   MaximumFeeExceededError,
   NoSuchElementError,
   ProviderRequiredError,
   TimeoutError,
+  UnsupportedOperationError,
   ValueError
 } from '@tetherto/wdk-wallet'

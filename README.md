@@ -54,6 +54,7 @@ account.dispose()
 - **Per-Operation Paymaster Overrides**: Quote, transfer, or send with an alternate paymaster token or max fee
 - **Message Signing**: Sign messages and verify signatures with Solana accounts
 - **Read-Only Accounts**: Monitor any Solana address without a private key
+- **Pluggable Signers**: Sign with a seed, a private key, or any custom `ISignerSolana`
 - **Secure Memory Disposal**: Clear private keys from memory when done
 
 ## Configuration
@@ -87,6 +88,29 @@ const account = new WalletAccountSolanaGasless(seedPhrase, "0'/0'", config)
 
 console.log(await account.getAddress())
 ```
+
+### Use a Signer
+
+Accounts sign through an `ISignerSolana`. The signers are re-exported from `@tetherto/wdk-wallet-solana-gasless/signers`, so you don't need to depend on `@tetherto/wdk-wallet-solana` directly.
+
+```javascript
+import WalletManagerSolanaGasless, { WalletAccountSolanaGasless } from '@tetherto/wdk-wallet-solana-gasless'
+import { PrivateKeySignerSolana, SeedSignerSolana } from '@tetherto/wdk-wallet-solana-gasless/signers'
+
+// An account from a private key. The account owns the key and wipes it on dispose().
+const account = WalletAccountSolanaGasless.fromPrivateKey(privateKey, config)
+
+// A manager with a derivable default signer, plus a named non-derivable signer.
+const signer = new SeedSignerSolana(seedPhrase)
+const wallet = new WalletManagerSolanaGasless(signer, config)
+
+wallet.addSigner('treasury', new PrivateKeySignerSolana(privateKey))
+
+const derived = await wallet.getAccount(0)
+const treasury = await wallet.getAccount('treasury')
+```
+
+A signer you pass in is never disposed by the account or the manager; dispose it yourself when you are done. Accounts derived by the manager, and accounts created from a seed or with `fromPrivateKey`, own their signer and wipe it on `dispose()`.
 
 ### Read-Only Account
 

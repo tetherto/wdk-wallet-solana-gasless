@@ -1,49 +1,78 @@
 export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySolanaGasless implements IWalletAccount<FullySignedTransaction> {
     /**
-     * Creates a new solana gasless wallet account.
+     * Creates a new solana gasless wallet account from a signer.
      *
-     * @param {string | Uint8Array} seed - A [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
-     * @param {string} path - The SLIP-0010 derivation path (e.g. "0'/0'/0'").
+     * The signer is wiped on {@link dispose} only if `shouldWipeSignerOnDisposal` is set.
+     *
+     * @overload
+     * @param {ISignerSolana} signer - The solana signer, derived to an account path.
+     * @param {SolanaGaslessWalletConfig & SignerOptions} config - The configuration object.
+     * @throws {ValueError} If the configuration is not valid.
+     */
+    constructor(signer: ISignerSolana, config: SolanaGaslessWalletConfig & SignerOptions);
+    /**
+     * Creates a new solana gasless wallet account from a seed.
+     *
+     * @see https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+     * @overload
+     * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+     * @param {string} path - The SLIP-0010 derivation path, relative to "m/44'/501'" (e.g. "0'/0'").
      * @param {SolanaGaslessWalletConfig} config - The configuration object.
+     * @throws {ValueError} If the seed, the path or the configuration is not valid.
      */
     constructor(seed: string | Uint8Array, path: string, config: SolanaGaslessWalletConfig);
     /**
-     * The solana gasless wallet account configuration.
+     * Creates the first solana gasless wallet account (m/44'/501'/0'/0') from a seed.
      *
-     * @protected
-     * @type {SolanaGaslessWalletConfig}
+     * @see https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
+     * @overload
+     * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
+     * @param {SolanaGaslessWalletConfig} config - The configuration object.
+     * @throws {ValueError} If the seed or the configuration is not valid.
      */
-    protected _config: SolanaGaslessWalletConfig;
-    /** @private */
-    private _ownerAccount;
+    constructor(seed: string | Uint8Array, config: SolanaGaslessWalletConfig);
+    /**
+     * Creates a new solana gasless wallet account from a raw private key. The account owns the signer it creates
+     * and wipes it on {@link dispose}.
+     *
+     * @param {string | Uint8Array} privateKey - A 32-byte Ed25519 private key (hex string or bytes), or a 64-byte secret key (base58 string or bytes).
+     * @param {SolanaGaslessWalletConfig} config - The configuration object.
+     * @returns {WalletAccountSolanaGasless} The wallet account.
+     * @throws {ValueError} If the private key or the configuration is not valid.
+     */
+    static fromPrivateKey(privateKey: string | Uint8Array, config: SolanaGaslessWalletConfig): WalletAccountSolanaGasless;
     /** @private */
     private _signer;
+    /** @private */
+    private _shouldWipeSignerOnDisposal;
+    /** @private */
+    private _disposed;
     /**
-     * The derivation path's index of this account.
+     * True if the wallet account has been disposed.
      *
-     * @type {number}
+     * @type {boolean}
      */
-    get index(): number;
+    get disposed(): boolean;
     /**
-     * The derivation path of this account.
+     * The derivation path of this account, or null for an account backed by a non-HD signer.
      *
-     * @type {string}
+     * @type {string | null}
      */
-    get path(): string;
+    get path(): string | null;
     /**
-     * The account's key pair.
+     * The account's key pair, or null if the account's signer does not expose key material.
      *
-     * Returns the raw key pair bytes in standard Solana format.
-     * - privateKey: 32-byte Ed25519 secret key (Uint8Array)
-     * - publicKey: 32-byte Ed25519 public key (Uint8Array)
+     * The uint8 arrays are the signer's own, so any external change will reflect to the signer's internal representation. For this reason,
+     * it's strongly recommended to treat the key pair as a read-only view of the keys. While it's still technically possible to alter their
+     * content, client code should never do so.
      *
-     * @type {KeyPair}
+     * @type {KeyPair | null}
      */
-    get keyPair(): KeyPair;
+    get keyPair(): KeyPair | null;
     /**
-     * The address of this account.
+     * Returns the account's address.
      *
-     * @returns {Promise<string>} The address.
+     * @returns {Promise<string>} The account's address.
      */
     getAddress(): Promise<string>;
     /**
@@ -51,6 +80,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      *
      * @param {string} message - The message to sign.
      * @returns {Promise<string>} The message's signature.
+     * @throws {DisposalError} If the wallet account has been disposed.
      */
     sign(message: string): Promise<string>;
     /**
@@ -59,6 +89,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaTransaction} tx - The transaction to sign.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<FullySignedTransaction>} The signed transaction.
+     * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      */
     signTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<FullySignedTransaction>;
@@ -68,6 +99,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {SolanaTransaction | FullySignedTransaction} tx - The transaction. Either an unsigned transaction or an already-signed transaction (as returned by `signTransaction`).
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransactionResult>} The transaction's result.
+     * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting. The `paymasterToken` option must name the same token the transaction was signed with.
      */
@@ -87,6 +119,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {TransferOptions} options - The transfer's options.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<TransferResult>} The transfer's result.
+     * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
      */
     transfer({ token, recipient, amount }: TransferOptions, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransferResult>;
@@ -97,7 +130,9 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      */
     toReadOnlyAccount(): Promise<WalletAccountReadOnlySolanaGasless>;
     /**
-     * Disposes the wallet account, erasing the private key from the memory.
+     * Disposes the wallet account. The signer given at construction, and its private key, is wiped only if the
+     * account owns it (see {@link SignerOptions}); a caller-owned signer is left for the caller to dispose.
+     * Calling it again has no effect.
      */
     dispose(): void;
     /** @private */
@@ -135,7 +170,9 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      */
     protected _isSignedTransaction(tx: SolanaTransaction | FullySignedTransaction): tx is FullySignedTransaction;
     /** @private */
-    private _getSigner;
+    private _signTransactionMessage;
+    /** @private */
+    private _guardDisposed;
 }
 export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
@@ -147,5 +184,13 @@ export type FullySignedTransaction = import("@solana/transactions").FullySignedT
 export type SolanaTransaction = import("./wallet-account-read-only-solana-gasless.js").SolanaTransaction;
 export type SolanaGaslessWalletConfig = import("./wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletConfig;
 export type SolanaGaslessWalletPaymasterConfigOverrides = import("./wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfigOverrides;
-import { MaximumFeeExceededError, ProviderRequiredError } from '@tetherto/wdk-wallet';
+export type ISignerSolana = import("@tetherto/wdk-wallet-solana/signers").ISignerSolana;
+export type ValueError = import("@tetherto/wdk-wallet").ValueError;
+export type SignerOptions = {
+    /**
+     * - If true, wipes the signer given at construction on calls to the 'dispose' method.
+     */
+    shouldWipeSignerOnDisposal?: boolean;
+};
+import { DisposalError, MaximumFeeExceededError, ProviderRequiredError } from '@tetherto/wdk-wallet';
 import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solana-gasless.js';
