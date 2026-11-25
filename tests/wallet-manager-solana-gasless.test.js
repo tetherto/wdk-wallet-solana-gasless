@@ -127,6 +127,17 @@ describe('WalletManagerSolanaGasless', () => {
       expect(account).toBeInstanceOf(WalletAccountSolanaGasless)
       expect(account.path).toBeNull()
       expect(await account.getAddress()).toBe(TEST_PRIVATE_KEY_ADDRESS)
+
+      signer.dispose()
+    })
+
+    test('should return the same account on repeated calls with a signer name', async () => {
+      const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
+
+      wallet.addSigner('treasury', signer)
+
+      const account = await wallet.getAccount('treasury')
+
       expect(await wallet.getAccount('treasury')).toBe(account)
 
       signer.dispose()
@@ -221,7 +232,7 @@ describe('WalletManagerSolanaGasless', () => {
   })
 
   describe('constructor', () => {
-    test('should accept a derivable signer as the default signer', async () => {
+    test('should derive accounts from a derivable default signer', async () => {
       const signer = new SeedSignerSolana(TEST_SEED_PHRASE)
 
       const signerWallet = new WalletManagerSolanaGasless(signer, TEST_CONFIG)
@@ -230,12 +241,19 @@ describe('WalletManagerSolanaGasless', () => {
 
       expect(account.path).toBe("m/44'/501'/0'/0'")
       expect(await account.getAddress()).toBe('3uXqWpwgqKVdiHAwF6Vmu4G4vdQzpR66xjPkz1G7zMKE')
+
+      signerWallet.dispose()
+      signer.dispose()
+    })
+
+    test('should not expose a seed when created from a signer', () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE)
+
+      const signerWallet = new WalletManagerSolanaGasless(signer, TEST_CONFIG)
+
       expect(signerWallet.seed).toBeUndefined()
 
       signerWallet.dispose()
-
-      expect(signer.disposed).toBe(false)
-
       signer.dispose()
     })
 
@@ -293,6 +311,18 @@ describe('WalletManagerSolanaGasless', () => {
       expect(tempAccount.keyPair.privateKey).toBeNull()
     })
     
+    test('should not dispose a default signer the caller supplied', () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE)
+
+      const signerWallet = new WalletManagerSolanaGasless(signer, TEST_CONFIG)
+
+      signerWallet.dispose()
+
+      expect(signer.disposed).toBe(false)
+
+      signer.dispose()
+    })
+
     test('should dispose the default signer if the wallet manager created it from a seed', () => {
       const signer = wallet.getSigner()
 

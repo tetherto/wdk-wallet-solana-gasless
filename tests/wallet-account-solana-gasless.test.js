@@ -1241,31 +1241,54 @@ describe('WalletAccountSolanaGasless', () => {
       dispose.mockRestore()
     })
 
-    test('should support a signer whose address is only available through getAddress, via getAccount(name) and getAccountByPath', async () => {
-      mockRpc.getBalance = jest.fn().mockReturnValue({
-        send: jest.fn().mockResolvedValue({ value: 123n })
+    describe('with a signer that only exposes its address through getAddress', () => {
+      let signer
+      let leafSigner
+
+      beforeEach(async () => {
+        signer = new DeferredAddressSignerSolana(new SeedSignerSolana(TEST_SEED_PHRASE))
+        leafSigner = await signer.derive("0'/0'")
       })
 
-      const signer = new DeferredAddressSignerSolana(new SeedSignerSolana(TEST_SEED_PHRASE))
+      afterEach(() => {
+        leafSigner.dispose()
+        signer.dispose()
+      })
 
-      wallet.addSigner('deferred', signer)
-      wallet.addSigner('deferred-leaf', await signer.derive("0'/0'"))
+      test('should resolve the address of an account derived with getAccountByPath', async () => {
+        wallet.addSigner('deferred', signer)
 
-      const accounts = [
-        await wallet.getAccount('deferred-leaf'),
-        await wallet.getAccountByPath("0'/0'", { signerName: 'deferred' })
-      ]
+        const deferredAccount = await wallet.getAccountByPath("0'/0'", { signerName: 'deferred' })
 
-      for (const deferredAccount of accounts) {
         expect(await deferredAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+      })
+
+      test('should resolve the address of an account returned for a signer name', async () => {
+        wallet.addSigner('deferred-leaf', leafSigner)
+
+        const deferredAccount = await wallet.getAccount('deferred-leaf')
+
+        expect(await deferredAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+      })
+
+      test('should read the balance at the resolved address', async () => {
+        mockRpc.getBalance = jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 123n })
+        })
+
+        const deferredAccount = new WalletAccountSolanaGasless(leafSigner, TEST_CONFIG)
+
         expect(await deferredAccount.getBalance()).toBe(123n)
-        expect(getBase64EncodedWireTransaction(await deferredAccount.signTransaction(TRANSACTION))).toBe(SIGNED_TRANSACTION)
-      }
+        expect(mockRpc.getBalance).toHaveBeenCalledWith(TEST_ACCOUNT_ADDRESS, { commitment: 'processed' })
+      })
 
-      expect(mockRpc.getBalance).toHaveBeenCalledWith(TEST_ACCOUNT_ADDRESS, { commitment: 'processed' })
+      test('should sign a transaction', async () => {
+        const deferredAccount = new WalletAccountSolanaGasless(leafSigner, TEST_CONFIG)
 
-      wallet.getSigners()['deferred-leaf'].dispose()
-      signer.dispose()
+        const signedTransaction = await deferredAccount.signTransaction(TRANSACTION)
+
+        expect(getBase64EncodedWireTransaction(signedTransaction)).toBe(SIGNED_TRANSACTION)
+      })
     })
   })
 })
