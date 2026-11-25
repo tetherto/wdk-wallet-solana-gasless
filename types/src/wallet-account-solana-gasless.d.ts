@@ -18,7 +18,12 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
      * @param {string} path - The SLIP-0010 derivation path, relative to "m/44'/501'" (e.g. "0'/0'").
      * @param {SolanaGaslessWalletConfig} config - The configuration object.
-     * @throws {ValueError} If the seed, the path or the configuration is not valid.
+     * @throws {ValueError} If the seed phrase is not a valid BIP-39 seed phrase.
+     * @throws {ValueError} If the raw seed is not between 16 and 64 bytes.
+     * @throws {ValueError} If the path is not a valid BIP-32 path.
+     * @throws {ValueError} If any child path in the path is not hardened.
+     * @throws {ValueError} If a required paymaster field is missing from the configuration.
+     * @throws {ValueError} If the `paymasterUrl` option is an empty list.
      */
     constructor(seed: string | Uint8Array, path: string, config: SolanaGaslessWalletConfig);
     /**
@@ -28,7 +33,10 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @overload
      * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
      * @param {SolanaGaslessWalletConfig} config - The configuration object.
-     * @throws {ValueError} If the seed or the configuration is not valid.
+     * @throws {ValueError} If the seed phrase is not a valid BIP-39 seed phrase.
+     * @throws {ValueError} If the raw seed is not between 16 and 64 bytes.
+     * @throws {ValueError} If a required paymaster field is missing from the configuration.
+     * @throws {ValueError} If the `paymasterUrl` option is an empty list.
      */
     constructor(seed: string | Uint8Array, config: SolanaGaslessWalletConfig);
     /**
@@ -38,7 +46,10 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @param {string | Uint8Array} privateKey - A 32-byte Ed25519 private key (hex string or bytes), or a 64-byte secret key (base58 string or bytes).
      * @param {SolanaGaslessWalletConfig} config - The configuration object.
      * @returns {WalletAccountSolanaGasless} The wallet account.
-     * @throws {ValueError} If the private key or the configuration is not valid.
+     * @throws {ValueError} If the private key is neither a 32-byte key (hex or bytes) nor a 64-byte secret key (base58 or bytes).
+     * @throws {ValueError} If the secret key's public half does not match its private half.
+     * @throws {ValueError} If a required paymaster field is missing from the configuration.
+     * @throws {ValueError} If the `paymasterUrl` option is an empty list.
      */
     static fromPrivateKey(privateKey: string | Uint8Array, config: SolanaGaslessWalletConfig): WalletAccountSolanaGasless;
     /**
