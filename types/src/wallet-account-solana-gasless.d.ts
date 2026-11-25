@@ -41,6 +41,13 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @throws {ValueError} If the private key or the configuration is not valid.
      */
     static fromPrivateKey(privateKey: string | Uint8Array, config: SolanaGaslessWalletConfig): WalletAccountSolanaGasless;
+    /**
+     * The solana gasless wallet account configuration.
+     *
+     * @protected
+     * @type {SolanaGaslessWalletConfig}
+     */
+    protected _config: SolanaGaslessWalletConfig;
     /** @private */
     private _signer;
     /** @private */
