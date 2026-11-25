@@ -117,6 +117,18 @@ describe('WalletManagerSolanaGasless', () => {
       expect(second.disposed).toBe(true)
     })
 
+    test('should derive the account at the given index below a registered signer', async () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE, "m/44'/501'/1'")
+
+      wallet.addSigner('savings', signer)
+
+      const account = await wallet.getAccount(2, { signerName: 'savings' })
+
+      expect(account.path).toBe("m/44'/501'/1'/2'/0'")
+
+      signer.dispose()
+    })
+
     test('should return the account of a registered signer', async () => {
       const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
 
