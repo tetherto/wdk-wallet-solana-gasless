@@ -111,6 +111,12 @@ export default class WalletManagerSolanaGasless extends WalletManager<ISignerSol
         signerName?: string;
     }): Promise<WalletAccountSolanaGasless>;
     /**
+     * Disposes the wallet accounts, erasing their private keys from memory, and the default signer if the manager
+     * created it from a seed. Signers you supplied, as the default or via {@link addSigner}, are never disposed.
+     * Calling it again has no effect.
+     */
+    dispose(): void;
+    /**
      * Builds the account config, injecting the manager's shared clients so accounts reuse them
      * instead of opening their own.
      *
