@@ -216,8 +216,8 @@ export default class WalletManagerSolanaGasless extends WalletManager {
   }
 
   /**
-   * Disposes the wallet accounts, erasing their private keys from memory, and the default signer if the manager
-   * created it from a seed. Signers you supplied, as the default or via {@link addSigner}, are never disposed.
+   * Disposes all wallet accounts, clearing secret material from memory. The default signer is disposed too if the
+   * manager created it from a seed; signers you supplied, as the default or via {@link addSigner}, are never disposed.
    * Calling it again has no effect.
    */
   dispose () {
