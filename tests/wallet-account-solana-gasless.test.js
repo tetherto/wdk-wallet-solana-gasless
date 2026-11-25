@@ -138,6 +138,7 @@ jest.unstable_mockModule('@solana/kora', () => ({
 const {
   default: WalletManagerSolanaGasless,
   DisposalError,
+  ValueError,
   WalletAccountReadOnlySolanaGasless,
   WalletAccountSolanaGasless
 } = await import('../index.js')
@@ -404,6 +405,24 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('sendTransaction', () => {
+    test('should throw if the transaction does not include the account among its signers', async () => {
+      mockPaymaster = createMockPaymaster(TEST_RECIPIENT_ADDRESS)
+
+      const unsignedAccount = new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0'", TEST_CONFIG)
+
+      await expect(unsignedAccount.sendTransaction({
+        version: 0,
+        instructions: [],
+        lifetimeConstraint: {
+          blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+          lastValidBlockHeight: 1000000n
+        }
+      }))
+        .rejects.toThrow(new ValueError('The transaction does not include this signer among its signatures.'))
+
+      unsignedAccount.dispose()
+    })
+
     test('should throw if account is disposed', async () => {
         const tempAccount = new WalletAccountSolanaGasless(
           TEST_SEED_PHRASE,
@@ -813,6 +832,24 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('signTransaction', () => {
+    test('should throw if the transaction does not include the account among its signers', async () => {
+      mockPaymaster = createMockPaymaster(TEST_RECIPIENT_ADDRESS)
+
+      const unsignedAccount = new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0'", TEST_CONFIG)
+
+      await expect(unsignedAccount.signTransaction({
+        version: 0,
+        instructions: [],
+        lifetimeConstraint: {
+          blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+          lastValidBlockHeight: 1000000n
+        }
+      }))
+        .rejects.toThrow(new ValueError('The transaction does not include this signer among its signatures.'))
+
+      unsignedAccount.dispose()
+    })
+
     test('should sign a transaction without broadcasting, then broadcast it manually via the rpc', async () => {
       mockRpc.sendTransaction = jest.fn().mockReturnValue({
         send: jest.fn().mockResolvedValue('manual-broadcast-sig-xyz')
@@ -1239,6 +1276,45 @@ describe('WalletAccountSolanaGasless', () => {
       expect(dispose).toHaveBeenCalledTimes(1)
 
       dispose.mockRestore()
+    })
+
+    test('should throw if the derivation path is not a valid BIP-32 path', () => {
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "a'/b'", TEST_CONFIG))
+        .toThrow(new ValueError('The derivation path is not a valid BIP-32 path.'))
+    })
+
+    test('should throw if a child path is not hardened', () => {
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0", TEST_CONFIG))
+        .toThrow(new ValueError('In Solana, every child path in a derivation path must be hardened.'))
+    })
+
+    test('should throw if the raw seed is not between 16 and 64 bytes', () => {
+      expect(() => new WalletAccountSolanaGasless(new Uint8Array(8), TEST_CONFIG))
+        .toThrow('The seed must be between 16 and 64 bytes.')
+    })
+
+    test('should throw if the paymaster url list is empty', () => {
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, { ...TEST_CONFIG, paymasterUrl: [] }))
+        .toThrow(new ValueError("The 'paymasterUrl' option cannot be set to an empty list."))
+    })
+
+    test('should throw if the paymaster url list is empty when created from a private key', () => {
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, { ...TEST_CONFIG, paymasterUrl: [] }))
+        .toThrow(new ValueError("The 'paymasterUrl' option cannot be set to an empty list."))
+    })
+
+    test('should throw if the private key is neither a 32-byte key nor a 64-byte secret key', () => {
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey('abcd', TEST_CONFIG))
+        .toThrow(new ValueError('The private key must be a 32-byte key (hex or bytes) or a 64-byte secret key (base58 or bytes).'))
+    })
+
+    test('should throw if the secret key\'s public half does not match its private half', () => {
+      const secretKey = new Uint8Array(64)
+
+      secretKey.set(Buffer.from(TEST_PRIVATE_KEY, 'hex'))
+
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey(secretKey, TEST_CONFIG))
+        .toThrow(new ValueError('The secret key\'s public key does not match its private key.'))
     })
 
     describe('with a signer that only exposes its address through getAddress', () => {
