@@ -14,6 +14,4 @@
 
 'use strict'
 
-/** @typedef {import('@tetherto/wdk-wallet-solana/signers').ISignerSolana} ISignerSolana */
-
 export * from '@tetherto/wdk-wallet-solana/signers'
