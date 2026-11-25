@@ -206,6 +206,17 @@ describe('WalletManagerSolanaGasless', () => {
       signer.dispose()
     })
 
+    test('should throw if the registered signer has been disposed', async () => {
+      const signer = new SeedSignerSolana(TEST_SEED_PHRASE, "m/44'/501'/1'")
+
+      wallet.addSigner('savings', signer)
+
+      signer.dispose()
+
+      await expect(wallet.getAccountByPath("0'/0'", { signerName: 'savings' }))
+        .rejects.toThrow(new DisposalError('The given signer has been disposed.'))
+    })
+
     test('should throw if the signer does not support account derivation', async () => {
       const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
 

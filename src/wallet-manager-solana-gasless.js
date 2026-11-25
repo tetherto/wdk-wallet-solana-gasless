@@ -195,6 +195,10 @@ export default class WalletManagerSolanaGasless extends WalletManager {
     if (!this._accounts[key]) {
       const rootSigner = this.getSigner(signerName)
 
+      if (rootSigner.disposed) {
+        throw new DisposalError('The given signer has been disposed.')
+      }
+
       if (!rootSigner.isDerivable) {
         throw new InvalidSignerError('The signer does not support account derivation.')
       }
