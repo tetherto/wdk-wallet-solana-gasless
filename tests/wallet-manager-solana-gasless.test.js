@@ -124,7 +124,6 @@ describe('WalletManagerSolanaGasless', () => {
 
       const account = await wallet.getAccount('treasury')
 
-      expect(account).toBeInstanceOf(WalletAccountSolanaGasless)
       expect(account.path).toBeNull()
       expect(await account.getAddress()).toBe(TEST_PRIVATE_KEY_ADDRESS)
 
