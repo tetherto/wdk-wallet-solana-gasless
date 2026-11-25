@@ -151,7 +151,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /**
-   * The derivation path of this account, or null for an account backed by a non-HD signer.
+   * The derivation path of this account (see SLIP-0010), or null if the account's signer is not bound to a
+   * derivation position (e.g. private-key signers).
    *
    * @type {string | null}
    */
@@ -160,7 +161,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /**
-   * The account's key pair, or null if the account's signer does not expose key material.
+   * The account's key pair, or null if the account's signer does not allow
+   * retrieving key material (e.g. hardware signers).
    *
    * The uint8 arrays are the signer's own, so any external change will reflect to the signer's internal representation. For this reason,
    * it's strongly recommended to treat the key pair as a read-only view of the keys. While it's still technically possible to alter their
@@ -341,9 +343,9 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /**
-   * Disposes the wallet account. The signer given at construction, and its private key, is wiped only if the
-   * account owns it (see {@link SignerOptions}); a caller-owned signer is left for the caller to dispose.
-   * Calling it again has no effect.
+   * Disposes the object along with all its data (cleaning up any sensitive field from memory). The signer given at
+   * construction is wiped only if the account owns it (see {@link SignerOptions}); a caller-owned signer is left for
+   * the caller to dispose. Calling it again has no effect.
    */
   dispose () {
     if (this._disposed) {
