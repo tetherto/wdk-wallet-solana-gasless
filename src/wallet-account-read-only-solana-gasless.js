@@ -25,7 +25,7 @@ import { appendTransactionMessageInstruction, appendTransactionMessageInstructio
 import { KoraClient } from '@solana/kora'
 import { compileTransaction, getBase64EncodedWireTransaction } from '@solana/transactions'
 import { findAssociatedTokenPda, getCreateAssociatedTokenIdempotentInstruction, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
-import { AccountRole, blockhash, createNoopSigner, getU64Decoder, pipe } from '@solana/kit'
+import { AccountRole, blockhash, createNoopSigner, getU64Decoder, getU64Encoder, pipe } from '@solana/kit'
 import { getTransferSolInstruction } from '@solana-program/system'
 
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
@@ -55,13 +55,20 @@ import { getTransferSolInstruction } from '@solana-program/system'
  * @property {string | KoraClientOptions | KoraClient | (string | KoraClientOptions | KoraClient)[]} paymasterUrl - The paymaster RPC url, client options, an already-built kora client, or failover list. An already-built client (or failover wrapper) is reused as-is, so a manager can share a single instance across every account it creates.
  * @property {string} paymasterAddress - The address of the paymaster program.
  * @property {PaymasterTokenConfig} paymasterToken - The paymaster token configuration.
+ * @property {number | bigint} [paymentBufferBps] - A buffer added to the paymaster fee payment, in basis points of the quoted fee (an integer from 0 to 10000, default: 0). The padded payment is capped by the operation's max fee option, if set. Kora keeps the whole payment, so the buffer is paid on every operation.
  */
 
-/** @typedef {Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken"> & Pick<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">>} SolanaGaslessWalletPaymasterConfigOverrides */
+/** @typedef {Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken" | "paymentBufferBps"> & Pick<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">>} SolanaGaslessWalletPaymasterConfigOverrides */
 
 /** @typedef {SolanaWalletConfig & SolanaGaslessWalletPaymasterConfig} SolanaGaslessWalletConfig */
 
 const MAX_U64 = 0xffffffffffffffffn
+
+const BPS_DENOMINATOR = 10_000n
+
+const MAX_PAYMENT_BUFFER_BPS = 10_000n
+
+const PAYMENT_INSTRUCTION_AMOUNT_OFFSET = 1
 
 export default class WalletAccountReadOnlySolanaGasless extends WalletAccountReadOnly {
   /**
@@ -213,8 +220,11 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @param {SolanaTransaction} tx - The transaction.
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
    */
   async quoteSendTransaction (tx, config = {}) {
+    const { transactionMaxFee } = this._mergeConfig(config)
+
     let transactionMessage = tx
 
     // Handle native token transfer { to, value } transaction
@@ -228,7 +238,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
       transactionMessage = setTransactionMessageFeePayer(address(this._config.paymasterAddress), transactionMessage)
     }
 
-    const { payment_amount: fee } = await this._getTransactionPaymentInfo(transactionMessage, config)
+    const { payment_amount: fee } = await this._getTransactionPaymentInfo(transactionMessage, config, transactionMaxFee)
 
     return { fee: BigInt(fee) }
   }
@@ -239,11 +249,15 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @param {TransferOptions} options - The transfer's options.
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
    * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+   * @throws {ValueError} If the amount exceeds the representable range.
+   * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
    */
   async quoteTransfer ({ token, recipient, amount }, config = {}) {
+    const { transferMaxFee } = this._mergeConfig(config)
+
     const transactionMessage = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
 
-    const { payment_amount: fee } = await this._getTransactionPaymentInfo(transactionMessage, config)
+    const { payment_amount: fee } = await this._getTransactionPaymentInfo(transactionMessage, config, transferMaxFee)
 
     return { fee: BigInt(fee) }
   }
@@ -349,7 +363,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {void}
    */
   static _validateConfig (config) {
-    const { paymasterUrl, paymasterAddress, paymasterToken } = config
+    const { paymasterUrl, paymasterAddress, paymasterToken, paymentBufferBps } = config
     const missingFields = []
 
     if (!Array.isArray(paymasterUrl) && !WalletAccountReadOnlySolanaGasless._isKoraClient(paymasterUrl)) {
@@ -369,6 +383,26 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
 
     if (missingFields.length > 0) {
       throw new ValueError(`Missing required paymaster token configuration fields: ${missingFields.join(', ')}.`)
+    }
+
+    if (paymentBufferBps !== undefined) {
+      WalletAccountReadOnlySolanaGasless._validatePaymentBufferBps(paymentBufferBps)
+    }
+  }
+
+  /**
+   * Validates the `paymentBufferBps` option.
+   *
+   * @protected
+   * @param {number | bigint} paymentBufferBps - The payment buffer (in basis points).
+   * @returns {void}
+   * @throws {ValueError} If the payment buffer is not an integer between 0 and 10000.
+   */
+  static _validatePaymentBufferBps (paymentBufferBps) {
+    const isInteger = typeof paymentBufferBps === 'bigint' || Number.isInteger(paymentBufferBps)
+
+    if (!isInteger || paymentBufferBps < 0 || paymentBufferBps > MAX_PAYMENT_BUFFER_BPS) {
+      throw new ValueError(`The 'paymentBufferBps' option must be an integer between 0 and ${MAX_PAYMENT_BUFFER_BPS}.`)
     }
   }
 
@@ -485,15 +519,24 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   }
 
   /**
-   * Fetch the payment info for a given transaction message.
+   * Fetch the payment info for a given transaction message. The quoted payment is padded by the
+   * `paymentBufferBps` option and capped by the given max fee; the padded amount is written back
+   * into the payment instruction and returned as `payment_amount`.
    *
    * @protected
    * @param {TransactionMessage} transactionMessage - The transaction message to fetch the payment info.
    * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
+   * @param {number | bigint} [maxFee] - The max fee the operation is checked against, which caps the padded payment. If not set, the padded payment is not capped.
    * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
+   * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
+   * @throws {ValueError} If the payment instruction is not a recognized SPL transfer to the paymaster token account.
    */
-  async _getTransactionPaymentInfo (transactionMessage, config = {}) {
+  async _getTransactionPaymentInfo (transactionMessage, config = {}, maxFee = undefined) {
     const mergedConfig = this._mergeConfig(config)
+
+    const { paymentBufferBps = 0 } = mergedConfig
+
+    WalletAccountReadOnlySolanaGasless._validatePaymentBufferBps(paymentBufferBps)
 
     const addr = await this.getAddress()
 
@@ -516,13 +559,40 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     }
 
     const paymasterTokenAccount = await this._getPaymasterAssociatedTokenAccount(mergedConfig.paymasterToken.address)
-    const paymentAmount = this._getPaymentInstructionAmount(upgradedPaymentInstruction, paymasterTokenAccount)
+    const quotedAmount = this._getPaymentInstructionAmount(upgradedPaymentInstruction, paymasterTokenAccount)
+
+    const paymentAmount = this._padPaymentAmount(quotedAmount, paymentBufferBps, maxFee)
+
+    const data = new Uint8Array(upgradedPaymentInstruction.data)
+    data.set(getU64Encoder().encode(paymentAmount), PAYMENT_INSTRUCTION_AMOUNT_OFFSET)
 
     return {
       ...payment,
       payment_amount: Number(paymentAmount),
-      payment_instruction: upgradedPaymentInstruction
+      payment_instruction: { ...upgradedPaymentInstruction, data }
     }
+  }
+
+  /**
+   * Pads a quoted payment amount by a buffer, rounding up, and caps it by a max fee. A quote that
+   * already exceeds the max fee is not capped, so the operation's max-fee check still rejects it.
+   *
+   * @protected
+   * @param {bigint} quotedAmount - The payment amount quoted by the paymaster.
+   * @param {number | bigint} paymentBufferBps - The payment buffer (in basis points).
+   * @param {number | bigint} [maxFee] - The max fee that caps the padded amount. If not set, the padded amount is not capped.
+   * @returns {bigint} The padded payment amount.
+   */
+  _padPaymentAmount (quotedAmount, paymentBufferBps, maxFee = undefined) {
+    const multiplier = BPS_DENOMINATOR + BigInt(paymentBufferBps)
+
+    const paddedAmount = (quotedAmount * multiplier + BPS_DENOMINATOR - 1n) / BPS_DENOMINATOR
+
+    if (maxFee === undefined || quotedAmount > BigInt(maxFee)) {
+      return paddedAmount
+    }
+
+    return paddedAmount < BigInt(maxFee) ? paddedAmount : BigInt(maxFee)
   }
 
   /**
