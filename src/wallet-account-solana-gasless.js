@@ -212,13 +212,14 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the wallet account has been disposed.
    * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
    * @throws {ValueError} If the transaction doesn't include the account among its signers.
+   * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
    */
   async signTransaction (tx, config = {}) {
     this._guardDisposed()
 
     const mergedConfig = this._mergeConfig(config)
 
-    const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config)
+    const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config, mergedConfig.transactionMaxFee)
 
     if (mergedConfig.transactionMaxFee !== undefined && fee > mergedConfig.transactionMaxFee) {
       throw new MaximumFeeExceededError('Exceeded maximum fee cost for transaction operation.')
@@ -247,6 +248,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the wallet account has been disposed.
    * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
    * @throws {ValueError} If the transaction doesn't include the account among its signers.
+   * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
    * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting. The `paymasterToken` option must name the same token the transaction was signed with.
    */
   async sendTransaction (tx, config = {}) {
@@ -268,7 +270,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
     const mergedConfig = this._mergeConfig(config)
 
-    const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config)
+    const { fee, transactionMessage } = await this._populateTransactionMessage(tx, config, mergedConfig.transactionMaxFee)
 
     if (mergedConfig.transactionMaxFee !== undefined && fee > mergedConfig.transactionMaxFee) {
       throw new MaximumFeeExceededError('Exceeded maximum fee cost for transaction operation.')
@@ -312,6 +314,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @throws {DisposalError} If the wallet account has been disposed.
    * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
    * @throws {ValueError} If the transaction doesn't include the account among its signers.
+   * @throws {ValueError} If the amount exceeds the representable range.
+   * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
    */
   async transfer ({ token, recipient, amount }, config = {}) {
     this._guardDisposed()
@@ -320,7 +324,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 
     const tx = await this._buildSPLTransferTransactionMessage(token, recipient, amount)
 
-    const { fee, transactionMessage } = await this._populateTransactionMessage(tx, mergedConfig)
+    const { fee, transactionMessage } = await this._populateTransactionMessage(tx, mergedConfig, mergedConfig.transferMaxFee)
 
     if (mergedConfig.transferMaxFee !== undefined && fee > mergedConfig.transferMaxFee) {
       throw new MaximumFeeExceededError('Exceeded maximum fee cost for transfer operation.')
@@ -367,7 +371,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
   }
 
   /** @private */
-  async _populateTransactionMessage (tx, config = {}) {
+  async _populateTransactionMessage (tx, config = {}, maxFee = undefined) {
     let draft = tx.to !== undefined && tx.value !== undefined
       ? await this._buildNativeTransferTransactionMessage(tx.to, tx.value)
       : tx
@@ -380,7 +384,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
     const paymasterPublicKey = address(this._config.paymasterAddress)
     draft = setTransactionMessageFeePayer(paymasterPublicKey, draft)
 
-    const { payment_amount: fee, payment_instruction: paymentInstruction } = await this._getTransactionPaymentInfo(draft, config)
+    const { payment_amount: fee, payment_instruction: paymentInstruction } = await this._getTransactionPaymentInfo(draft, config, maxFee)
 
     const transactionMessage = appendTransactionMessageInstruction(paymentInstruction, draft)
 

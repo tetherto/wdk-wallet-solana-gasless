@@ -19,7 +19,7 @@ import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globa
 import { NoSuchElementError } from '@tetherto/wdk-wallet'
 
 import { getBase64EncodedWireTransaction, getTransactionDecoder, isFullySignedTransaction } from '@solana/transactions'
-import { address, getBase64Encoder } from '@solana/kit'
+import { address, getBase64Encoder, getCompiledTransactionMessageDecoder, getU64Decoder } from '@solana/kit'
 import { findAssociatedTokenPda, getTransferInstruction, TOKEN_PROGRAM_ADDRESS } from '@solana-program/token'
 
 const TEST_SEED_PHRASE =
@@ -117,6 +117,13 @@ function createMockPaymaster (accountAddress = TEST_ACCOUNT_ADDRESS) {
       blockhash: 'HhqkdqemrKDK5Wd4oiCtzfpBWfdGS79YhLtzAck5Nz7T'
     })
   }
+}
+
+function decodePaymentAmount (encodedTransaction) {
+  const { messageBytes } = getTransactionDecoder().decode(getBase64Encoder().encode(encodedTransaction))
+  const { staticAccounts, instructions } = getCompiledTransactionMessageDecoder().decode(messageBytes)
+  const paymentInstruction = instructions.findLast(({ programAddressIndex }) => staticAccounts[programAddressIndex] === TOKEN_PROGRAM_ADDRESS)
+  return getU64Decoder().decode(paymentInstruction.data, 1)
 }
 
 let mockRpc
@@ -574,6 +581,38 @@ describe('WalletAccountSolanaGasless', () => {
       expect(result).toHaveProperty('hash')
     })
 
+    test('should pay the fee padded by paymentBufferBps', async () => {
+      const result = await account.sendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000n
+      }, { paymentBufferBps: 50 })
+
+      const [[{ transaction }]] = mockPaymaster.signAndSendTransaction.mock.calls
+
+      expect(result).toEqual({ hash: DUMMY_SIGNATURE, fee: 5025n })
+      expect(decodePaymentAmount(transaction)).toBe(5025n)
+    })
+
+    test('should cap the padded fee payment at transactionMaxFee', async () => {
+      const result = await account.sendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000n
+      }, { paymentBufferBps: 100, transactionMaxFee: 5010n })
+
+      const [[{ transaction }]] = mockPaymaster.signAndSendTransaction.mock.calls
+
+      expect(result).toEqual({ hash: DUMMY_SIGNATURE, fee: 5010n })
+      expect(decodePaymentAmount(transaction)).toBe(5010n)
+    })
+
+    test('should throw if the unpadded fee exceeds transactionMaxFee', async () => {
+      await expect(account.sendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000n
+      }, { paymentBufferBps: 100, transactionMaxFee: 4999n })).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      expect(mockPaymaster.signAndSendTransaction).not.toHaveBeenCalled()
+    })
+
     test('should reject a payment instruction that transfers more than payment_amount claims', async () => {
       mockPaymaster.getPaymentInstruction.mockImplementation(async () => {
         const [paymasterTokenAccount] = await findAssociatedTokenPda({
@@ -995,6 +1034,24 @@ describe('WalletAccountSolanaGasless', () => {
       expect(mockPaymaster.signTransaction).not.toHaveBeenCalled()
     })
 
+    test('should sign a payment instruction padded by the configured paymentBufferBps', async () => {
+      const bufferedAccount = new WalletAccountSolanaGasless(
+        TEST_SEED_PHRASE,
+        "0'/0'",
+        { ...TEST_CONFIG, paymentBufferBps: 100n }
+      )
+
+      const signedTx = await bufferedAccount.signTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000n
+      })
+
+      const [[{ transaction }]] = mockPaymaster.signTransaction.mock.calls
+
+      expect(decodePaymentAmount(transaction)).toBe(5050n)
+      expect(decodePaymentAmount(getBase64EncodedWireTransaction(signedTx))).toBe(5050n)
+    })
+
     test('should throw when signing a transaction after disposal', async () => {
       const account = new WalletAccountSolanaGasless(
         TEST_SEED_PHRASE,
@@ -1148,6 +1205,19 @@ describe('WalletAccountSolanaGasless', () => {
         })
       ).rejects.toThrow('Invalid payment instruction from paymaster.')
       expect(mockPaymaster.signAndSendTransaction).not.toHaveBeenCalled()
+    })
+
+    test('should pay the fee padded by paymentBufferBps and capped at transferMaxFee', async () => {
+      const result = await account.transfer({
+        token: TEST_PAYMASTER_TOKEN,
+        recipient: TEST_RECIPIENT_ADDRESS,
+        amount: 1000000n
+      }, { paymentBufferBps: 100, transferMaxFee: 5010n, transactionMaxFee: 5001n })
+
+      const [[{ transaction }]] = mockPaymaster.signAndSendTransaction.mock.calls
+
+      expect(result).toEqual({ hash: DUMMY_SIGNATURE, fee: 5010n })
+      expect(decodePaymentAmount(transaction)).toBe(5010n)
     })
 
     test('should successfully transfer tokens', async () => {

@@ -71,11 +71,24 @@ const config = {
   paymasterToken: {
     address: 'TokenMint111111111111111111111111111111111'
   },
-  transferMaxFee: 1000000n
+  transferMaxFee: 1000000n,
+  // Optional: pad the paymaster fee payment by 0.5% (basis points, 0 to 10000, default: 0).
+  paymentBufferBps: 50
 }
 ```
 
 `provider` and `paymasterUrl` may also be arrays. When arrays are provided, the wallet uses failover behavior and retries requests against the configured providers.
+
+### Fee Payment Buffer
+
+Kora quotes the fee with one oracle price and checks the payment against a fresh price when it signs the transaction, with no tolerance. If the price moves against the user in between, the transaction is rejected with `Insufficient token payment`. Set `paymentBufferBps` to pay a margin on top of the quote, so the payment still covers the fee at signing time:
+
+- The payment is `ceil(quote * (10000 + paymentBufferBps) / 10000)`.
+- It is capped by the operation's max fee (`transferMaxFee` for `transfer`, `transactionMaxFee` for `sendTransaction` and `signTransaction`). A quote that already exceeds the max fee still throws `MaximumFeeExceededError`. With no max fee set, the payment is not capped.
+- `quoteTransfer` and `quoteSendTransaction` return the padded amount, so the quote matches what is paid.
+- Kora keeps the whole payment, so the buffer is paid on every operation. The default is `0` (no buffer); 50 to 100 bps is a reasonable starting point.
+
+The option can also be set per call, alongside `paymasterToken`, `transferMaxFee` and `transactionMaxFee`.
 
 ## Examples
 
@@ -165,7 +178,8 @@ const override = {
   paymasterToken: {
     address: 'AlternateFeeMint11111111111111111111111111'
   },
-  transferMaxFee: 500000n
+  transferMaxFee: 500000n,
+  paymentBufferBps: 100
 }
 
 const quote = await account.quoteTransfer({

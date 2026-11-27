@@ -70,6 +70,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @param {SolanaTransaction} tx - The transaction.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
      */
     quoteSendTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransactionResult, "hash">>;
     /**
@@ -78,6 +79,8 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @param {TransferOptions} options - The transfer's options.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
      * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+     * @throws {ValueError} If the amount exceeds the representable range.
+     * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
      */
     quoteTransfer(options: TransferOptions, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<Omit<TransferResult, "hash">>;
     /**
@@ -128,6 +131,16 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @returns {void}
      */
     protected static _validateConfig (config: Omit<SolanaGaslessWalletConfig, 'transferMaxFee'>): void
+
+    /**
+     * Validates the `paymentBufferBps` option.
+     *
+     * @protected
+     * @param {number | bigint} paymentBufferBps - The payment buffer (in basis points).
+     * @returns {void}
+     * @throws {ValueError} If the payment buffer is not an integer between 0 and 10000.
+     */
+    protected static _validatePaymentBufferBps (paymentBufferBps: number | bigint): void
 
     /**
      * Builds the paymaster client from the wallet configuration: an already-built {@link KoraClient}
@@ -193,14 +206,30 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      */
     protected _assertFeePayer(tx: SolanaTransaction): Promise<void>;
     /**
-     * Fetch the payment info for a given transaction message.
+     * Fetch the payment info for a given transaction message. The quoted payment is padded by the
+     * `paymentBufferBps` option and capped by the given max fee; the padded amount is written back
+     * into the payment instruction and returned as `payment_amount`.
      *
      * @protected
      * @param {TransactionMessage} transactionMessage - The transaction message to fetch the payment info.
      * @param {SolanaGaslessWalletPaymasterConfigOverrides} [config] - If set, overrides the given configuration options.
+     * @param {number | bigint} [maxFee] - The max fee the operation is checked against, which caps the padded payment. If not set, the padded payment is not capped.
      * @returns {Promise<GetPaymentInstructionResponse>} The payment info.
+     * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
+     * @throws {ValueError} If the payment instruction is not a recognized SPL transfer to the paymaster token account.
      */
-    protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<GetPaymentInstructionResponse>;
+    protected _getTransactionPaymentInfo(transactionMessage: TransactionMessage, config?: SolanaGaslessWalletPaymasterConfigOverrides, maxFee?: number | bigint): Promise<GetPaymentInstructionResponse>;
+    /**
+     * Pads a quoted payment amount by a buffer, rounding up, and caps it by a max fee. A quote that
+     * already exceeds the max fee is not capped, so the operation's max-fee check still rejects it.
+     *
+     * @protected
+     * @param {bigint} quotedAmount - The payment amount quoted by the paymaster.
+     * @param {number | bigint} paymentBufferBps - The payment buffer (in basis points).
+     * @param {number | bigint} [maxFee] - The max fee that caps the padded amount. If not set, the padded amount is not capped.
+     * @returns {bigint} The padded payment amount.
+     */
+    protected _padPaymentAmount(quotedAmount: bigint, paymentBufferBps: number | bigint, maxFee?: number | bigint): bigint;
     /**
      * Merges a caller's configuration overrides on top of the account's configuration. Keys whose
      * override value is `undefined` keep the configured value, so an option left unset in an
@@ -268,8 +297,12 @@ export type SolanaGaslessWalletPaymasterConfig = {
      * - The paymaster token configuration.
      */
     paymasterToken: PaymasterTokenConfig;
+    /**
+     * - A buffer added to the paymaster fee payment, in basis points of the quoted fee (an integer from 0 to 10000, default: 0). The padded payment is capped by the operation's max fee option, if set. Kora keeps the whole payment, so the buffer is paid on every operation.
+     */
+    paymentBufferBps?: number | bigint;
 };
-export type SolanaGaslessWalletPaymasterConfigOverrides = Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken"> & Pick<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">>;
+export type SolanaGaslessWalletPaymasterConfigOverrides = Partial<Pick<SolanaGaslessWalletPaymasterConfig, "paymasterToken" | "paymentBufferBps"> & Pick<SolanaWalletConfig, "transferMaxFee" | "transactionMaxFee">>;
 export type SolanaGaslessWalletConfig = SolanaWalletConfig & SolanaGaslessWalletPaymasterConfig;
 import { WalletAccountReadOnly, ValueError } from '@tetherto/wdk-wallet';
 import { KoraClient } from '@solana/kora';

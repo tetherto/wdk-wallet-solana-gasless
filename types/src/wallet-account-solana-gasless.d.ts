@@ -113,6 +113,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      * @throws {ValueError} If the transaction doesn't include the account among its signers.
+     * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
      */
     signTransaction(tx: SolanaTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<FullySignedTransaction>;
     /**
@@ -124,6 +125,7 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
      * @throws {ValueError} If the transaction doesn't include the account among its signers.
+     * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
      * @note When an already-signed transaction is passed, the paymaster has already co-signed it at sign time, so it is not contacted again and the transaction is broadcast directly to the network. The returned `fee` is decoded from the gasless payment instruction embedded in the signed message, and the `transactionMaxFee` check is re-applied before broadcasting. The `paymasterToken` option must name the same token the transaction was signed with.
      */
     sendTransaction(tx: SolanaTransaction | FullySignedTransaction, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransactionResult>;
@@ -145,6 +147,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
      * @throws {DisposalError} If the wallet account has been disposed.
      * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
      * @throws {ValueError} If the transaction doesn't include the account among its signers.
+     * @throws {ValueError} If the amount exceeds the representable range.
+     * @throws {ValueError} If the `paymentBufferBps` option is not an integer between 0 and 10000.
      */
     transfer({ token, recipient, amount }: TransferOptions, config?: SolanaGaslessWalletPaymasterConfigOverrides): Promise<TransferResult>;
     /**

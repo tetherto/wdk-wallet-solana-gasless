@@ -140,6 +140,12 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
         'Missing required paymaster token configuration fields: paymasterToken.'
       )
     })
+
+    test.each([-1, 10001, 1.5, 10001n])('should throw when paymentBufferBps is %p', (paymentBufferBps) => {
+      expect(() => {
+        new WalletAccountReadOnlySolanaGasless(TEST_ADDRESS, { ...TEST_CONFIG, paymentBufferBps })
+      }).toThrow("The 'paymentBufferBps' option must be an integer between 0 and 10000.")
+    })
   })
 
   describe('address', () => {
@@ -364,6 +370,51 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
       )
     })
 
+    test('should pad the quoted fee by the configured paymentBufferBps', async () => {
+      const account = new WalletAccountReadOnlySolanaGasless(TEST_ADDRESS, { ...TEST_CONFIG, paymentBufferBps: 50 })
+
+      const result = await account.quoteSendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000000n
+      })
+
+      expect(result).toEqual({ fee: 5025n })
+    })
+
+    test('should round the padded fee up', async () => {
+      const result = await readOnlyAccount.quoteSendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000000n
+      }, { paymentBufferBps: 1n })
+
+      expect(result).toEqual({ fee: 5001n })
+    })
+
+    test('should cap the padded fee at the transactionMaxFee override', async () => {
+      const result = await readOnlyAccount.quoteSendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000000n
+      }, { paymentBufferBps: 100, transactionMaxFee: 5010n, transferMaxFee: 5001n })
+
+      expect(result).toEqual({ fee: 5010n })
+    })
+
+    test('should not cap the padded fee when the quote already exceeds transactionMaxFee', async () => {
+      const result = await readOnlyAccount.quoteSendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000000n
+      }, { paymentBufferBps: 100, transactionMaxFee: 4999n })
+
+      expect(result).toEqual({ fee: 5050n })
+    })
+
+    test('should throw when the paymentBufferBps override is invalid', async () => {
+      await expect(readOnlyAccount.quoteSendTransaction({
+        to: TEST_RECIPIENT_ADDRESS,
+        value: 1000000000n
+      }, { paymentBufferBps: 10001 })).rejects.toThrow("The 'paymentBufferBps' option must be an integer between 0 and 10000.")
+      expect(mockPaymaster.getPaymentInstruction).not.toHaveBeenCalled()
+    })
   })
 
   describe('quoteTransfer', () => {
@@ -411,6 +462,26 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
       })
 
       expect(result).toEqual({ fee: 5000n })
+    })
+
+    test('should pad the quoted fee by the paymentBufferBps override', async () => {
+      const result = await readOnlyAccount.quoteTransfer({
+        token: TEST_PAYMASTER_TOKEN,
+        recipient: TEST_RECIPIENT_ADDRESS,
+        amount: 1000000n
+      }, { paymentBufferBps: 100 })
+
+      expect(result).toEqual({ fee: 5050n })
+    })
+
+    test('should cap the padded fee at the transferMaxFee override', async () => {
+      const result = await readOnlyAccount.quoteTransfer({
+        token: TEST_PAYMASTER_TOKEN,
+        recipient: TEST_RECIPIENT_ADDRESS,
+        amount: 1000000n
+      }, { paymentBufferBps: 100, transferMaxFee: 5010n, transactionMaxFee: 5001n })
+
+      expect(result).toEqual({ fee: 5010n })
     })
   })
 
