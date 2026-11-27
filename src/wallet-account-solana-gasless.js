@@ -62,7 +62,8 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
    * @overload
    * @param {ISignerSolana} signer - The solana signer, derived to an account path.
    * @param {SolanaGaslessWalletConfig & SignerOptions} config - The configuration object.
-   * @throws {ValueError} If the configuration is not valid.
+   * @throws {ValueError} If a required paymaster field is missing from the configuration.
+   * @throws {ValueError} If the `paymasterUrl` option is an empty list.
    */
 
   /**
