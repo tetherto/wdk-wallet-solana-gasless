@@ -200,20 +200,15 @@ export default class WalletAccountSolanaGasless extends WalletAccountReadOnlySol
 export type IWalletAccount<TSignedTransaction> = import("@tetherto/wdk-wallet").IWalletAccount<TSignedTransaction>;
 export type KeyPair = import("@tetherto/wdk-wallet").KeyPair;
 export type TransactionResult = import("@tetherto/wdk-wallet").TransactionResult;
+export type ValueError = import("@tetherto/wdk-wallet").ValueError;
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
+export type SignerOptions = import("@tetherto/wdk-wallet-solana").SignerOptions;
+export type ISignerSolana = import("@tetherto/wdk-wallet-solana/signers").ISignerSolana;
 export type TransactionMessage = import("@solana/transaction-messages").TransactionMessage;
 export type FullySignedTransaction = import("@solana/transactions").FullySignedTransaction;
 export type SolanaTransaction = import("./wallet-account-read-only-solana-gasless.js").SolanaTransaction;
 export type SolanaGaslessWalletConfig = import("./wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletConfig;
 export type SolanaGaslessWalletPaymasterConfigOverrides = import("./wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfigOverrides;
-export type ISignerSolana = import("@tetherto/wdk-wallet-solana/signers").ISignerSolana;
-export type ValueError = import("@tetherto/wdk-wallet").ValueError;
-export type SignerOptions = {
-    /**
-     * - If true, wipes the signer given at construction on calls to the 'dispose' method.
-     */
-    shouldWipeSignerOnDisposal?: boolean;
-};
 import { DisposalError, MaximumFeeExceededError, ProviderRequiredError } from '@tetherto/wdk-wallet';
 import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solana-gasless.js';

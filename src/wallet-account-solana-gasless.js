@@ -32,6 +32,7 @@ import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solan
  */
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
 /** @typedef {import('@tetherto/wdk-wallet').TransactionResult} TransactionResult */
+/** @typedef {import('@tetherto/wdk-wallet').ValueError} ValueError */
 
 /** @typedef {import('@solana/transaction-messages').TransactionMessage} TransactionMessage */
 /** @typedef {import('@solana/transactions').FullySignedTransaction} FullySignedTransaction */
@@ -40,18 +41,12 @@ import WalletAccountReadOnlySolanaGasless from './wallet-account-read-only-solan
 /** @typedef {import('@tetherto/wdk-wallet-solana').SolanaWalletConfig} SolanaWalletConfig */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferOptions} TransferOptions */
 /** @typedef {import('@tetherto/wdk-wallet-solana').TransferResult} TransferResult */
-
-/** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
-/** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfigOverrides} SolanaGaslessWalletPaymasterConfigOverrides */
+/** @typedef {import('@tetherto/wdk-wallet-solana').SignerOptions} SignerOptions */
 
 /** @typedef {import('@tetherto/wdk-wallet-solana/signers').ISignerSolana} ISignerSolana */
 
-/** @typedef {import('@tetherto/wdk-wallet').ValueError} ValueError */
-
-/**
- * @typedef {Object} SignerOptions
- * @property {boolean} [shouldWipeSignerOnDisposal] - If true, wipes the signer given at construction on calls to the 'dispose' method.
- */
+/** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletConfig} SolanaGaslessWalletConfig */
+/** @typedef {import('./wallet-account-read-only-solana-gasless.js').SolanaGaslessWalletPaymasterConfigOverrides} SolanaGaslessWalletPaymasterConfigOverrides */
 
 const BIP_44_SOL_DERIVATION_PATH_PREFIX = "m/44'/501'"
 
