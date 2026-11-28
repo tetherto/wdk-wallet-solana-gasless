@@ -44,11 +44,30 @@ function createMockRpc () {
   return {
     getBalance: jest.fn(),
     getAccountInfo: jest.fn(),
-    getTokenAccountBalance: jest.fn(),
     getLatestBlockhash: jest.fn(),
     getTransaction: jest.fn(),
     getSignatureStatuses: jest.fn(),
     getMultipleAccounts: jest.fn()
+  }
+}
+
+function createMintAccount () {
+  return {
+    data: [Buffer.alloc(82).toString('base64'), 'base64'],
+    owner: TOKEN_PROGRAM_ADDRESS,
+    lamports: 1461600n
+  }
+}
+
+function createTokenAccount (amount) {
+  const buffer = Buffer.alloc(165)
+  buffer.writeBigUInt64LE(BigInt(amount), 64)
+  buffer.writeUInt8(1, 108)
+
+  return {
+    data: [buffer.toString('base64'), 'base64'],
+    owner: TOKEN_PROGRAM_ADDRESS,
+    lamports: 2039280n
   }
 }
 
@@ -148,6 +167,12 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
     })
   })
 
+  describe('config', () => {
+    test('should return the configuration given at construction', () => {
+      expect(readOnlyAccount.config).toEqual(TEST_CONFIG)
+    })
+  })
+
   describe('address', () => {
     test('should return the correct address', async () => {
       expect(await readOnlyAccount.getAddress()).toBe(TEST_ADDRESS)
@@ -168,29 +193,28 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
   })
 
   describe('getTokenBalance', () => {
+    beforeEach(() => {
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: [createMintAccount()] })
+      })
+    })
+
     test('should return token balance when ATA exists', async () => {
       mockRpc.getAccountInfo.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-            lamports: 2039280n,
-            data: [Buffer.alloc(165).toString('base64'), 'base64']
-          }
-        })
-      })
-      mockRpc.getTokenAccountBalance.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            amount: '1000000'
-          }
-        })
+        send: jest.fn().mockResolvedValue({ value: createTokenAccount(1000000) })
       })
 
       const balance = await readOnlyAccount.getTokenBalance(TEST_PAYMASTER_TOKEN)
 
+      const [ata] = await findAssociatedTokenPda({
+        mint: address(TEST_PAYMASTER_TOKEN),
+        owner: address(TEST_ADDRESS),
+        tokenProgram: TOKEN_PROGRAM_ADDRESS
+      })
+
       expect(balance).toBe(1000000n)
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(1)
-      expect(mockRpc.getTokenAccountBalance).toHaveBeenCalledTimes(1)
+      expect(mockRpc.getAccountInfo).toHaveBeenCalledWith(ata, { commitment: 'confirmed', encoding: 'base64' })
     })
 
     test('should return zero when ATA does not exist', async () => {
@@ -201,35 +225,19 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
       const balance = await readOnlyAccount.getTokenBalance(TEST_PAYMASTER_TOKEN)
 
       expect(balance).toBe(0n)
-      expect(mockRpc.getTokenAccountBalance).not.toHaveBeenCalled()
     })
   })
 
   describe('getTokenBalances', () => {
-    function createTokenAccountData (amount) {
-      const buffer = Buffer.alloc(165)
-      buffer.writeBigUInt64LE(BigInt(amount), 64)
-      return buffer.toString('base64')
-    }
-
     test('should return balances for multiple tokens', async () => {
       const token2 = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
-      mockRpc.getMultipleAccounts.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: [
-            {
-              data: [createTokenAccountData(1000000), 'base64'],
-              owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-              lamports: 2039280n
-            },
-            {
-              data: [createTokenAccountData(5000000), 'base64'],
-              owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-              lamports: 2039280n
-            }
-          ]
+      mockRpc.getMultipleAccounts
+        .mockReturnValueOnce({
+          send: jest.fn().mockResolvedValue({ value: [createMintAccount(), createMintAccount()] })
         })
-      })
+        .mockReturnValueOnce({
+          send: jest.fn().mockResolvedValue({ value: [createTokenAccount(1000000), createTokenAccount(5000000)] })
+        })
 
       const balances = await readOnlyAccount.getTokenBalances([
         TEST_PAYMASTER_TOKEN,
@@ -241,11 +249,13 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
     })
 
     test('should return 0n for tokens where ATA does not exist', async () => {
-      mockRpc.getMultipleAccounts.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: [null]
+      mockRpc.getMultipleAccounts
+        .mockReturnValueOnce({
+          send: jest.fn().mockResolvedValue({ value: [createMintAccount()] })
         })
-      })
+        .mockReturnValueOnce({
+          send: jest.fn().mockResolvedValue({ value: [null] })
+        })
 
       const balances = await readOnlyAccount.getTokenBalances([
         TEST_PAYMASTER_TOKEN
@@ -257,28 +267,17 @@ describe('WalletAccountReadOnlySolanaGasless', () => {
 
   describe('getPaymasterTokenBalance', () => {
     test('should return the configured paymaster token balance', async () => {
-      mockRpc.getAccountInfo.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            owner: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
-            lamports: 2039280n,
-            data: [Buffer.alloc(165).toString('base64'), 'base64']
-          }
-        })
+      mockRpc.getMultipleAccounts.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: [createMintAccount()] })
       })
-      mockRpc.getTokenAccountBalance.mockReturnValue({
-        send: jest.fn().mockResolvedValue({
-          value: {
-            amount: '123456'
-          }
-        })
+      mockRpc.getAccountInfo.mockReturnValue({
+        send: jest.fn().mockResolvedValue({ value: createTokenAccount(123456) })
       })
 
       const balance = await readOnlyAccount.getPaymasterTokenBalance()
 
       expect(balance).toBe(123456n)
       expect(mockRpc.getAccountInfo).toHaveBeenCalledTimes(1)
-      expect(mockRpc.getTokenAccountBalance).toHaveBeenCalledTimes(1)
     })
   })
 

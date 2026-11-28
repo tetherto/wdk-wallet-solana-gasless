@@ -27,21 +27,21 @@
     "test:coverage": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --coverage"
   },
   "dependencies": {
-    "@solana-program/system": "0.9.0",
-    "@solana-program/token": "0.7.0",
-    "@solana/addresses": "3.0.3",
-    "@solana/kit": "6.1.0",
-    "@solana/kit-plugin-instruction-plan": "0.6.0",
-    "@solana/kit-plugin-payer": "0.6.0",
-    "@solana/kit-plugin-rpc": "0.6.0",
-    "@solana/kora": "0.2.1",
-    "@solana/rpc": "3.0.3",
-    "@solana/signers": "3.0.3",
-    "@solana/transaction-messages": "3.0.3",
-    "@solana/transactions": "3.0.3",
+    "@solana-program/system": "0.15.0",
+    "@solana-program/token": "0.17.0",
+    "@solana/addresses": "8.3.0",
+    "@solana/kit": "8.6.0",
+    "@solana/kit-plugin-instruction-plan": "0.19.0",
+    "@solana/kit-plugin-rpc": "0.19.0",
+    "@solana/kit-plugin-signer": "0.19.0",
+    "@solana/kora": "0.3.0",
+    "@solana/rpc": "8.3.0",
+    "@solana/signers": "8.3.0",
+    "@solana/transaction-messages": "8.3.0",
+    "@solana/transactions": "8.3.0",
     "@tetherto/wdk-failover-provider": "1.0.0-beta.2",
-    "@tetherto/wdk-wallet": "1.0.0-beta.19",
-    "@tetherto/wdk-wallet-solana": "1.0.0-beta.16",
+    "@tetherto/wdk-wallet": "1.0.0-beta.26",
+    "@tetherto/wdk-wallet-solana": "1.0.0-beta.22",
     "bare-node-runtime": "^1.5.2"
   },
   "devDependencies": {
@@ -58,6 +58,11 @@
     },
     "./package": {
       "default": "./package.json"
+    },
+    "./signers": {
+      "types": "./types/src/signers/index.d.ts",
+      "bare": "./src/signers/bare.js",
+      "default": "./src/signers/index.js"
     }
   },
   "publishConfig": {

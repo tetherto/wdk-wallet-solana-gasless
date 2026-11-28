@@ -9,7 +9,7 @@ export type WaitForTransactionTarget = import("@tetherto/wdk-wallet").WaitForTra
 export type WaitForTransactionOptions = import("@tetherto/wdk-wallet").WaitForTransactionOptions;
 export type TransferOptions = import("@tetherto/wdk-wallet-solana").TransferOptions;
 export type TransferResult = import("@tetherto/wdk-wallet-solana").TransferResult;
-export { AssertionError, MaximumFeeExceededError, NoSuchElementError, ProviderRequiredError, TimeoutError, ValueError } from "@tetherto/wdk-wallet";
+export { AssertionError, DisposalError, InvalidSignerError, MaximumFeeExceededError, NoSuchElementError, ProviderRequiredError, TimeoutError, UnsupportedOperationError, ValueError } from "@tetherto/wdk-wallet";
 export type FullySignedTransaction = import("./src/wallet-account-solana-gasless.js").FullySignedTransaction;
 export type SolanaTransactionReceipt = import("./src/wallet-account-read-only-solana-gasless.js").SolanaTransactionReceipt;
 export type SolanaTransactionDetails = import("@tetherto/wdk-wallet-solana").SolanaTransactionDetails;
@@ -18,3 +18,4 @@ export type PaymasterTokenConfig = import("./src/wallet-account-read-only-solana
 export type SolanaGaslessWalletPaymasterConfig = import("./src/wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfig;
 export type SolanaGaslessWalletPaymasterConfigOverrides = import("./src/wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletPaymasterConfigOverrides;
 export type SolanaGaslessWalletConfig = import("./src/wallet-account-read-only-solana-gasless.js").SolanaGaslessWalletConfig;
+export type SignerOptions = import("./src/wallet-account-solana-gasless.js").SignerOptions;

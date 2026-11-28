@@ -144,9 +144,61 @@ jest.unstable_mockModule('@solana/kora', () => ({
 
 const {
   default: WalletManagerSolanaGasless,
+  DisposalError,
+  ValueError,
   WalletAccountReadOnlySolanaGasless,
   WalletAccountSolanaGasless
 } = await import('../index.js')
+
+const { ISignerSolana, PrivateKeySignerSolana, SeedSignerSolana } = await import('../src/signers/index.js')
+
+const TEST_PRIVATE_KEY = 'de705bcaa34a2ea50c0b7e6e584006f2458652fa9d6e20994ac146852490c76f'
+
+class DeferredAddressSignerSolana extends ISignerSolana {
+  constructor (signer) {
+    super()
+
+    this._signer = signer
+  }
+
+  get isDerivable () {
+    return this._signer.isDerivable
+  }
+
+  get keyPair () {
+    return null
+  }
+
+  get path () {
+    return this._signer.path
+  }
+
+  get disposed () {
+    return this._signer.disposed
+  }
+
+  async derive (path) {
+    return new DeferredAddressSignerSolana(await this._signer.derive(path))
+  }
+
+  async getAddress () {
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    return await this._signer.getAddress()
+  }
+
+  async sign (message) {
+    return await this._signer.sign(message)
+  }
+
+  async signTransaction (unsignedTx) {
+    return await this._signer.signTransaction(unsignedTx)
+  }
+
+  dispose () {
+    this._signer.dispose()
+  }
+}
 
 describe('WalletAccountSolanaGasless', () => {
   let wallet
@@ -265,18 +317,6 @@ describe('WalletAccountSolanaGasless', () => {
       })
     })
 
-  describe('index', () => {
-      test('should return correct index for account 0', async () => {
-        const account0 = await wallet.getAccount(0)
-        expect(account0.index).toBe(0)
-      })
-
-      test('should return correct index for account 999', async () => {
-        const account999 = await wallet.getAccount(999)
-        expect(account999.index).toBe(999)
-      })
-    })
-
   describe('dispose', () => {
       test('should clear private key from memory', async () => {
         const tempWallet = new WalletManagerSolanaGasless(
@@ -372,6 +412,24 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('sendTransaction', () => {
+    test('should throw if the transaction does not include the account among its signers', async () => {
+      mockPaymaster = createMockPaymaster(TEST_RECIPIENT_ADDRESS)
+
+      const unsignedAccount = new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0'", TEST_CONFIG)
+
+      await expect(unsignedAccount.sendTransaction({
+        version: 0,
+        instructions: [],
+        lifetimeConstraint: {
+          blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+          lastValidBlockHeight: 1000000n
+        }
+      }))
+        .rejects.toThrow(new ValueError('The transaction does not include this signer among its signatures.'))
+
+      unsignedAccount.dispose()
+    })
+
     test('should throw if account is disposed', async () => {
         const tempAccount = new WalletAccountSolanaGasless(
           TEST_SEED_PHRASE,
@@ -385,7 +443,7 @@ describe('WalletAccountSolanaGasless', () => {
             to: TEST_RECIPIENT_ADDRESS,
             value: 1000n
           })
-        ).rejects.toThrow(/byteLength/)
+        ).rejects.toThrow('The wallet account has been disposed.')
     })
 
     test('should successfully send a transaction', async () => {
@@ -813,6 +871,24 @@ describe('WalletAccountSolanaGasless', () => {
   })
 
   describe('signTransaction', () => {
+    test('should throw if the transaction does not include the account among its signers', async () => {
+      mockPaymaster = createMockPaymaster(TEST_RECIPIENT_ADDRESS)
+
+      const unsignedAccount = new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0'", TEST_CONFIG)
+
+      await expect(unsignedAccount.signTransaction({
+        version: 0,
+        instructions: [],
+        lifetimeConstraint: {
+          blockhash: '6JbYxigC1rn83PMHZait5FHHpC3YqUMacnVJWFwfoayQ',
+          lastValidBlockHeight: 1000000n
+        }
+      }))
+        .rejects.toThrow(new ValueError('The transaction does not include this signer among its signatures.'))
+
+      unsignedAccount.dispose()
+    })
+
     test('should sign a transaction without broadcasting, then broadcast it manually via the rpc', async () => {
       mockRpc.sendTransaction = jest.fn().mockReturnValue({
         send: jest.fn().mockResolvedValue('manual-broadcast-sig-xyz')
@@ -990,7 +1066,7 @@ describe('WalletAccountSolanaGasless', () => {
         to: '9CXtfmGEtfjmtPKnq2QZcRzCiMzE9T8NQfRicJZetvk2',
         value: 1000000n
         })
-      ).rejects.toThrow(/byteLength/)
+      ).rejects.toThrow('The wallet account has been disposed.')
     })
 
     test('should request signing with the configured paymaster as signer', async () => {
@@ -1040,7 +1116,7 @@ describe('WalletAccountSolanaGasless', () => {
             recipient: TEST_RECIPIENT_ADDRESS,
             amount: 1000n
           })
-        ).rejects.toThrow(/byteLength/)
+        ).rejects.toThrow('The wallet account has been disposed.')
     })
 
     test('should throw if amount exceeds u64 maximum', async () => {
@@ -1164,6 +1240,201 @@ describe('WalletAccountSolanaGasless', () => {
 
       expect(readOnlyAccount).toBeInstanceOf(WalletAccountReadOnlySolanaGasless)
       expect(readOnlyAccount).not.toBeInstanceOf(WalletAccountSolanaGasless)
+    })
+  })
+  describe('signers', () => {
+    const TRANSACTION = {
+      to: TEST_RECIPIENT_ADDRESS,
+      value: 1000000n
+    }
+
+    const SIGNED_TRANSACTION = 'AgEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQHEla2PXBlRIfeyi6qvAfiCTY4MsQrviaIi3PeEgI4ktxE9j69CWEx+uOG+yvGNvlOV1Ci5kmYWPg00AOGEQMwMgAIAAgex50d8Np37a9HpYySMW+7FKAu5KmMS88QibIo8envDySsscVws8k21fpWkTfNMtCTeJGDobE9uvnumK1dIMN4ZFCx0QgXqlc/5UgVYYckMhNAc0ttjwDEOQ/ViFuN1iWA5Itbh5YQ8EumAfmOUeVRzI/h293Wv08BTXjpZJHA6/mrPZb1pAlhAT+18zcwUjuhXgxGr8KMLIlP4YyHOyuWbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqfgxWP2iPQaG+B6WewJxZKfNcOCZaDhmZ3ULalZfD+YiAgUCAQMMAgAAAEBCDwAAAAAABgMEAgEJA4gTAAAAAAAAAA=='
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    test('should use the given signer as the account owner', async () => {
+      const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
+
+      const signerAccount = new WalletAccountSolanaGasless(signer, TEST_CONFIG)
+
+      expect(signerAccount.path).toBeNull()
+      expect(signerAccount.keyPair).toEqual(signer.keyPair)
+      expect(await signerAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+
+      signer.dispose()
+    })
+
+    test('should create the first account from a seed and a configuration', () => {
+      const seedAccount = new WalletAccountSolanaGasless(TEST_SEED_PHRASE, TEST_CONFIG)
+
+      expect(seedAccount.path).toBe("m/44'/501'/0'/0'")
+
+      seedAccount.dispose()
+    })
+
+    test('should sign a transaction through a private key signer', async () => {
+      const signerAccount = WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, TEST_CONFIG)
+
+      const signedTransaction = await signerAccount.signTransaction(TRANSACTION)
+
+      expect(getBase64EncodedWireTransaction(signedTransaction)).toBe(SIGNED_TRANSACTION)
+
+      signerAccount.dispose()
+    })
+
+    test('should not dispose a signer it does not own', () => {
+      const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
+
+      const signerAccount = new WalletAccountSolanaGasless(signer, TEST_CONFIG)
+
+      signerAccount.dispose()
+
+      expect(signerAccount.disposed).toBe(true)
+      expect(signer.disposed).toBe(false)
+
+      signer.dispose()
+    })
+
+    test('should dispose the signer if the shouldWipeSignerOnDisposal option is set', () => {
+      const signer = new PrivateKeySignerSolana(TEST_PRIVATE_KEY)
+
+      const signerAccount = new WalletAccountSolanaGasless(signer, { ...TEST_CONFIG, shouldWipeSignerOnDisposal: true })
+
+      signerAccount.dispose()
+
+      expect(signer.disposed).toBe(true)
+    })
+
+    test('should throw a disposal error after disposal', async () => {
+      const signerAccount = WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, TEST_CONFIG)
+
+      signerAccount.dispose()
+
+      await expect(signerAccount.sign('test message')).rejects.toThrow(new DisposalError('The wallet account has been disposed.'))
+    })
+
+    test('should create an account from a private key that owns its signer', async () => {
+      const signerAccount = WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, TEST_CONFIG)
+
+      expect(signerAccount.path).toBeNull()
+      expect(await signerAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+
+      signerAccount.dispose()
+
+      expect(signerAccount.keyPair.privateKey).toBeNull()
+    })
+
+    test('should dispose the private key signer if the account cannot be created', () => {
+      const { paymasterAddress, ...config } = TEST_CONFIG
+
+      const dispose = jest.spyOn(PrivateKeySignerSolana.prototype, 'dispose')
+
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, config))
+        .toThrow('Missing required paymaster token configuration fields: paymasterAddress.')
+
+      expect(dispose).toHaveBeenCalledTimes(1)
+    })
+
+    test('should dispose the seed signer if the account cannot be created', () => {
+      const { paymasterAddress, ...config } = TEST_CONFIG
+
+      const dispose = jest.spyOn(SeedSignerSolana.prototype, 'dispose')
+
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0'", config))
+        .toThrow('Missing required paymaster token configuration fields: paymasterAddress.')
+
+      expect(dispose).toHaveBeenCalledTimes(1)
+    })
+
+    test('should throw if the derivation path is not a valid BIP-32 path', () => {
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "a'/b'", TEST_CONFIG))
+        .toThrow(new ValueError('The derivation path is not a valid BIP-32 path.'))
+    })
+
+    test('should throw if a child path is not hardened', () => {
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, "0'/0", TEST_CONFIG))
+        .toThrow(new ValueError('In Solana, every child path in a derivation path must be hardened.'))
+    })
+
+    test('should throw if the raw seed is not between 16 and 64 bytes', () => {
+      expect(() => new WalletAccountSolanaGasless(new Uint8Array(8), TEST_CONFIG))
+        .toThrow('The seed must be between 16 and 64 bytes.')
+    })
+
+    test('should throw if the paymaster url list is empty', () => {
+      expect(() => new WalletAccountSolanaGasless(TEST_SEED_PHRASE, { ...TEST_CONFIG, paymasterUrl: [] }))
+        .toThrow(new ValueError("The 'paymasterUrl' option cannot be set to an empty list."))
+    })
+
+    test('should throw if the paymaster url list is empty when created from a private key', () => {
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey(TEST_PRIVATE_KEY, { ...TEST_CONFIG, paymasterUrl: [] }))
+        .toThrow(new ValueError("The 'paymasterUrl' option cannot be set to an empty list."))
+    })
+
+    test('should throw if the private key is neither a 32-byte key nor a 64-byte secret key', () => {
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey('abcd', TEST_CONFIG))
+        .toThrow(new ValueError('The private key must be a 32-byte key (hex or bytes) or a 64-byte secret key (base58 or bytes).'))
+    })
+
+    test('should throw if the secret key\'s public half does not match its private half', () => {
+      const secretKey = new Uint8Array(64)
+
+      secretKey.set(Buffer.from(TEST_PRIVATE_KEY, 'hex'))
+
+      expect(() => WalletAccountSolanaGasless.fromPrivateKey(secretKey, TEST_CONFIG))
+        .toThrow(new ValueError('The secret key\'s public key does not match its private key.'))
+    })
+
+    describe('with a signer that only exposes its address through getAddress', () => {
+      let signer
+      let leafSigner
+
+      beforeEach(async () => {
+        signer = new DeferredAddressSignerSolana(new SeedSignerSolana(TEST_SEED_PHRASE))
+        leafSigner = await signer.derive("0'/0'")
+      })
+
+      afterEach(() => {
+        leafSigner.dispose()
+        signer.dispose()
+      })
+
+      test('should resolve the address of an account derived with getAccountByPath', async () => {
+        wallet.addSigner('deferred', signer)
+
+        const deferredAccount = await wallet.getAccountByPath("0'/0'", { signerName: 'deferred' })
+
+        expect(await deferredAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+      })
+
+      test('should resolve the address of an account returned for a signer name', async () => {
+        wallet.addSigner('deferred-leaf', leafSigner)
+
+        const deferredAccount = await wallet.getAccount('deferred-leaf')
+
+        expect(await deferredAccount.getAddress()).toBe(TEST_ACCOUNT_ADDRESS)
+      })
+
+      test('should read the balance at the resolved address', async () => {
+        mockRpc.getBalance = jest.fn().mockReturnValue({
+          send: jest.fn().mockResolvedValue({ value: 123n })
+        })
+
+        const deferredAccount = new WalletAccountSolanaGasless(leafSigner, TEST_CONFIG)
+
+        expect(await deferredAccount.getBalance()).toBe(123n)
+        expect(mockRpc.getBalance).toHaveBeenCalledWith(TEST_ACCOUNT_ADDRESS, { commitment: 'processed' })
+      })
+
+      test('should sign a transaction', async () => {
+        const deferredAccount = new WalletAccountSolanaGasless(leafSigner, TEST_CONFIG)
+
+        const signedTransaction = await deferredAccount.signTransaction(TRANSACTION)
+
+        expect(getBase64EncodedWireTransaction(signedTransaction)).toBe(SIGNED_TRANSACTION)
+      })
     })
   })
 })

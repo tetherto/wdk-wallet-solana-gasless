@@ -80,9 +80,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   constructor (addr, config) {
     WalletAccountReadOnlySolanaGasless._validateConfig(config)
 
-    const solanaReadOnlyAccount = new WalletAccountReadOnlySolana(addr, config)
-
-    super(solanaReadOnlyAccount._address)
+    super(addr, config)
 
     /**
      * The read-only wallet account configuration.
@@ -92,9 +90,6 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      */
     this._config = config
 
-    /** @private */
-    this._solanaReadOnlyAccount = solanaReadOnlyAccount
-
     /**
      * The commitment level for querying transaction and account states.
      * Determines the level of finality required before returning results.
@@ -102,7 +97,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @protected
      * @type {Commitment}
      */
-    this._commitment = this._solanaReadOnlyAccount._commitment
+    this._commitment = config.commitment ?? 'confirmed'
 
     /**
      * A Solana RPC client for HTTP requests.
@@ -110,7 +105,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @protected
      * @type {SolanaRpc | undefined}
      */
-    this._rpc = this._solanaReadOnlyAccount._rpc
+    this._rpc = WalletAccountReadOnlySolana._buildRpc(config)
 
     /**
      * A Kora RPC client for paymaster requests.
@@ -119,6 +114,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
      * @type {KoraClient}
      */
     this._paymaster = WalletAccountReadOnlySolanaGasless._buildPaymaster(config)
+
+    /** @private */
+    this._solanaReadOnlyAccount = undefined
   }
 
   /**
@@ -175,7 +173,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {Promise<bigint>} The sol balance (in lamports).
    */
   async getBalance () {
-    return await this._solanaReadOnlyAccount.getBalance()
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount.getBalance()
   }
 
   /**
@@ -185,7 +185,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {Promise<bigint>} The token balance (in base unit).
    */
   async getTokenBalance (tokenAddress) {
-    return await this._solanaReadOnlyAccount.getTokenBalance(tokenAddress)
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount.getTokenBalance(tokenAddress)
   }
 
   /**
@@ -195,7 +197,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {Promise<Record<string, bigint>>} A mapping of token addresses to their balances (in base units).
    */
   async getTokenBalances (tokenAddresses) {
-    return await this._solanaReadOnlyAccount.getTokenBalances(tokenAddresses)
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount.getTokenBalances(tokenAddresses)
   }
 
   /**
@@ -270,7 +274,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {Promise<SolanaTransactionReceipt | null>} — The receipt, or null if the transaction has not been included in a block yet.
    */
   async getTransactionReceipt (hash) {
-    return await this._solanaReadOnlyAccount.getTransactionReceipt(hash)
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount.getTransactionReceipt(hash)
   }
 
   /**
@@ -282,7 +288,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @throws {NoSuchElementError} If no transaction has been found for the given hash.
    */
   async getTransaction (hash) {
-    return await this._solanaReadOnlyAccount.getTransaction(hash)
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount.getTransaction(hash)
   }
 
   /**
@@ -310,7 +318,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {Promise<boolean>} True if the signature is valid.
    */
   async verify (message, signature) {
-    return await this._solanaReadOnlyAccount.verify(message, signature)
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount.verify(message, signature)
   }
 
   /**
@@ -456,7 +466,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
         ata: toATA,
         mint: tokenMint,
         owner: recipientPublicKey,
-        payer: paymasterPublicKey
+        payer: createNoopSigner(paymasterPublicKey)
       })
       instructions.push(createATAInstruction)
     }
@@ -498,7 +508,9 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
    * @returns {Promise<SolanaTransaction>} The transaction with lifetime.
    */
   async _ensureLifetime (tx) {
-    return await this._solanaReadOnlyAccount._ensureLifetime(tx)
+    const solanaReadOnlyAccount = await this._getSolanaReadOnlyAccount()
+
+    return await solanaReadOnlyAccount._ensureLifetime(tx)
   }
 
   /**
@@ -655,5 +667,16 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
     }
 
     return BigInt(getU64Decoder().decode(paymentInstruction.data, 1))
+  }
+
+  /** @private */
+  async _getSolanaReadOnlyAccount () {
+    if (!this._solanaReadOnlyAccount) {
+      const addr = await this.getAddress()
+
+      this._solanaReadOnlyAccount = new WalletAccountReadOnlySolana(addr, { ...this._config, provider: this._rpc })
+    }
+
+    return this._solanaReadOnlyAccount
   }
 }
