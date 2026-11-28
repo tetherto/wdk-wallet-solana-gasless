@@ -80,7 +80,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
   constructor (addr, config) {
     WalletAccountReadOnlySolanaGasless._validateConfig(config)
 
-    super(addr)
+    super(addr, config)
 
     /**
      * The read-only wallet account configuration.
@@ -466,7 +466,7 @@ export default class WalletAccountReadOnlySolanaGasless extends WalletAccountRea
         ata: toATA,
         mint: tokenMint,
         owner: recipientPublicKey,
-        payer: paymasterPublicKey
+        payer: createNoopSigner(paymasterPublicKey)
       })
       instructions.push(createATAInstruction)
     }
